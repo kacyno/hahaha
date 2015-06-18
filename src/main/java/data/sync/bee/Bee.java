@@ -5,5 +5,5 @@ package data.sync.bee;
  */
 public class Bee {
 
-    public void test();
+    public void test(){};
 }
