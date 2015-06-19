@@ -1,0 +1,17 @@
+<configuration>
+    <property>
+        <name>http.addr</name>
+        <value>0.0.0.0</value>
+        <description>http监听ip</description>
+    </property>
+    <property>
+        <name>http.port</name>
+        <value>43933</value>
+        <description>http端口</description>
+    </property>
+    <property>
+        <name>http.max.threads</name>
+        <value>100</value>
+        <description>http服务最大线程数</description>
+    </property>
+</configuration>
