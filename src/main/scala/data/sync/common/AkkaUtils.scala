@@ -9,7 +9,6 @@ import java.net.BindException
 
 
 import scala.collection.JavaConversions.mapAsJavaMap
-import scala.collection.parallel.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
