@@ -41,7 +41,7 @@ class Bee(queenUrl: String,hostname:String) extends Logging {
   /*
   开始任务
    */
-  private def startTask(tad: TaskAttemptDesc) = synchronized {
+  private def startTask(tad: TaskAttemptInfo) = synchronized {
     val worker = new Worker(tad, this)
     executorPool.execute(worker.getFetcher)
     executorPool.execute(worker.getSinker)

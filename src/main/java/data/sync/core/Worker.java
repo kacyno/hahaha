@@ -34,7 +34,7 @@ public class Worker {
         START,RUNNING,END
     }
     //任务的相关信息
-    private ClusterMessages.TaskAttemptDesc attempt;
+    private ClusterMessages.TaskAttemptInfo attempt;
     private Storage storage;
     //从db中抽取数据，写入storage
     private Fetcher fetcher ;
@@ -44,7 +44,7 @@ public class Worker {
     private Bee bee;
     //worker状态
     private volatile WorkerStatus status ;
-    public Worker(ClusterMessages.TaskAttemptDesc attempt,Bee bee) throws IOException {
+    public Worker(ClusterMessages.TaskAttemptInfo attempt,Bee bee) throws IOException {
         this.attempt = attempt;
         storage = new RAMStorage();
         storage.init("1",100,100,100);
@@ -74,7 +74,7 @@ public class Worker {
         private final Bee bee;
         private final Storage storage;
         private final String encode ="utf8";
-        public Fetcher(ClusterMessages.TaskAttemptDesc attempt,Storage storage,Bee bee){
+        public Fetcher(ClusterMessages.TaskAttemptInfo attempt,Storage storage,Bee bee){
             this.dbname = attempt.taskDesc().db();
             this.ip = attempt.taskDesc().ip();
             this.port = attempt.taskDesc().port();
@@ -147,7 +147,7 @@ public class Worker {
         private final Bee bee;
         private final Path target;
         private final Worker worker;
-        public Sinker(Worker worker,ClusterMessages.TaskAttemptDesc attempt,Bee bee,Storage storage) throws IOException {
+        public Sinker(Worker worker,ClusterMessages.TaskAttemptInfo attempt,Bee bee,Storage storage) throws IOException {
             Configuration conf = new Configuration();
             this.fs = FileSystem.get(conf);
             this.bee = bee;
