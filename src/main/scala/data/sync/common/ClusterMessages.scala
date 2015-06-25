@@ -48,4 +48,6 @@ object ClusterMessages {
 
   case class KillJob(jobId:String) extends ClusterMessage
 
+  case class StopAttempt(attemptId:String) extends ClusterMessage
+
 }

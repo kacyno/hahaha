@@ -89,8 +89,11 @@ class Queen extends Actor with ActorLogReceive with Logging {
       dbinfos,
       tasks,
       scala.collection.mutable.Set[TaskInfo](),
-      scala.collection.mutable.Set[TaskInfo]())
+      scala.collection.mutable.Set[TaskInfo](),
+      JobStatus.SUBMITED
+    )
     JobManager.addJob(job)
+    //加入调度
     FIFOScheduler.addJob(job)
     assignTask()
     jobId
@@ -98,10 +101,10 @@ class Queen extends Actor with ActorLogReceive with Logging {
 
   /*
   将任务分配给bee执行
-  两个场景触发该方法，1）新任务提交时 2）Bee上可用的的worker数发生变化
+  两个场景触发该方法，1）任务需要调度时 2）可用的的worker数发生变化时
    */
   def assignTask(): Unit = {
-    var assigns = FIFOScheduler.getAsigns()
+    val assigns = FIFOScheduler.assigns
     for ((beeId, tad) <- assigns) {
       BeeManager.getBee(beeId).sender ! tad
     }

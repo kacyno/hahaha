@@ -4,7 +4,7 @@ import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 
 import data.sync.common.ClientMessages.DBInfo
-import data.sync.common.ClusterMessages.{KillJob, BeeAttemptReport, TaskInfo, TaskAttemptInfo}
+import data.sync.common.ClusterMessages._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, FileSystem}
 import scala.collection.JavaConversions._
@@ -21,7 +21,7 @@ case class JobInfo(jobId: String,
                    appendTasks: scala.collection.mutable.Set[TaskInfo],
                    runningTasks: scala.collection.mutable.Set[TaskInfo],
                    finishedTasks: scala.collection.mutable.Set[TaskInfo],
-                   var status: JobStatus = JobStatus.STARTED
+                   var status: JobStatus = JobStatus.SUBMITED
                     )
 
 object JobManager {
@@ -40,6 +40,10 @@ object JobManager {
   //taskAttempt->report
   private val attempt2report = new ConcurrentHashMap[String, BeeAttemptReport]
 
+  def updateAttempt(attempt: TaskAttemptInfo): Unit = {
+    taskAttemptDic(attempt.attemptId) = attempt
+  }
+
   def mapBeeAttempt(beeId: String, attemptId: String): Unit = {
     attempt2bee(attemptId) = beeId;
     var s = bee2attempt.getOrElse(beeId, Set[String]())
@@ -53,7 +57,11 @@ object JobManager {
   }
 
   def getAttempts(taskId: String): Array[TaskAttemptInfo] = {
-    taskDic.getOrElse(taskId, null)
+    taskDic.getOrElse(taskId, Array[TaskAttemptInfo]())
+  }
+
+  def setAttempts(taskId: String, attempts: Array[TaskAttemptInfo]) {
+    taskDic(taskId) = attempts
   }
 
   def getReport(attemptId: String): BeeAttemptReport = {
@@ -67,17 +75,18 @@ object JobManager {
   def removeReport(attemptId: String): Unit = {
     attempt2report -= attemptId
   }
+
   //对长时间没有状态更新的任务启动并行
-  def checkTimeOut(): Boolean = {
+  def checkTimeOut(): Boolean = JobManager.synchronized{
     var needAssign = false
     val now = new Date().getTime
-    for(attemptId<-attempt2bee.keys()){
+    for (attemptId <- attempt2bee.keys()) {
       //两分钟没有汇报状态的将重新生成一个attempt并行执行
-      if(now - attempt2report(attemptId).time>2*60*1000) {
+      if (now - attempt2report(attemptId).time > 2 * 60 * 1000) {
         val task = taskAttemptDic(attemptId).taskDesc
         val job = jobDic(task.jobId)
-        job.runningTasks-=task
-        job.appendTasks+=task
+        job.runningTasks -= task
+        job.appendTasks += task
         needAssign = true
       }
     }
@@ -93,30 +102,48 @@ object JobManager {
     jobDic(job.jobId) = job
   }
 
-  def processReport(beeId: String, report: BeeAttemptReport, queen: Queen): Unit = {
-    var ar = attempt2report.getOrElse(report.attemptId,null)
-    if(ar==null||ar.readNum!=report.readNum||ar.writeNum!=report.writeNum||report.status!=ar.status)//只对变更的汇报进行更新
-      updateReport(report)
-    val apt = taskAttemptDic(report.attemptId)
-    apt.status = report.status
-    val task = apt.taskDesc
-    val job = jobDic(task.jobId)
-    if (report.status == TaskAttemptStatus.FINSHED) {
-      removeBeeAttempt(beeId, report.attemptId)
-      job.runningTasks -= task
-      job.finishedTasks += task
-      //job运行成功
-      if (job.runningTasks.size == 0 && job.appendTasks.size == 0)
-        commitJob(job.jobId)
-    } else if (report.status == TaskAttemptStatus.FAILED) {
-      removeBeeAttempt(beeId, report.attemptId)
-      job.runningTasks -= task
-      if (taskDic(task.taskId).length == MAX_ATTEMPT) {
-        killJob(job.jobId)
-      } else {
-        job.appendTasks += task
-      }
+  def processReport(beeId: String, report: BeeAttemptReport, queen: Queen): Unit = JobManager.synchronized{
+    val apt = taskAttemptDic.getOrElse(report.attemptId, null)
+    if (apt != null&&apt.taskDesc.status!=TaskStatus.FAILED&&apt.taskDesc.status!=TaskStatus.FINSHED) {//当task有确定结果时将不再接受新的汇报
 
+      val ar = attempt2report.getOrElse(report.attemptId, null)
+
+      if (ar == null || ar.readNum != report.readNum || ar.writeNum != report.writeNum || report.status != ar.status) //只对变更的汇报进行更新
+        updateReport(report)
+
+      apt.status = report.status
+
+      val task = apt.taskDesc
+
+      task.status = TaskStatus.RUNNING
+
+      val job = jobDic(task.jobId)
+
+      if (report.status == TaskAttemptStatus.FINSHED) {
+        //如果有其它并行运行的attempt,干掉
+        for(attempt2kill<-taskDic(task.taskId) if(attempt2kill.status==TaskAttemptStatus.RUNNING||attempt2kill.status==TaskAttemptStatus.STARTED)){
+          BeeManager.getBee(attempt2bee(attempt2kill.attemptId)).sender ! StopAttempt(attempt2kill.attemptId)
+        }
+        removeBeeAttempt(beeId, report.attemptId)
+        task.status = TaskStatus.FINSHED
+        job.runningTasks -= task
+        job.finishedTasks += task
+        //job运行成功
+        if (job.runningTasks.size == 0 && job.appendTasks.size == 0) {
+          job.status = JobStatus.FINSHED
+          commitJob(job.jobId)
+        }
+      } else if (report.status == TaskAttemptStatus.FAILED) {
+        removeBeeAttempt(beeId, report.attemptId)
+        job.runningTasks -= task
+        if (taskDic(task.taskId).length == MAX_ATTEMPT
+          &&taskDic(task.taskId).filter(_.status!=TaskAttemptStatus.FAILED).length==0) {//达到最大重试次数，并且已经执行过的attempt全是失败
+          task.status = TaskStatus.FAILED
+          killJob(job.jobId)
+        } else {
+          job.appendTasks += task
+        }
+      }
     }
   }
 
@@ -192,8 +219,8 @@ object JobManager {
         attempt2report -= attempt.attemptId
         taskAttemptDic -= attempt.attemptId
       }
-      taskDic-= task.taskId
+      taskDic -= task.taskId
     }
-    jobDic-=jobId
+    jobDic -= jobId
   }
 }

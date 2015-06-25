@@ -32,6 +32,7 @@ class Bee(conf:Configuration) extends Logging {
       case RegisteredBee(id) => beeId = id;logInfo("Registered Executor!!");startDriverHeartbeater
       case StartTask(tad) => startTask(tad)
       case KillJob(jobId) => killJob(jobId)
+      case StopAttempt(attemptId)=> stopAttempt(attemptId)
       case x: DisassociatedEvent =>
         logWarning(s"Received irrelevant DisassociatedEvent $x")
         System.exit(1)
@@ -44,7 +45,14 @@ class Bee(conf:Configuration) extends Logging {
       context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
     }
   }
-
+  private def stopAttempt(attemptId:String): Unit ={
+    for(worker<-workerSet){
+      if(worker.getAttempt.attemptId==attemptId){
+        worker.getFetcher.stop();
+        worker.getSinker.stop();
+      }
+    }
+  }
   private def killJob(jobId:String): Unit ={
     for(worker<-workerSet){
       if(worker.getJobId==jobId){
