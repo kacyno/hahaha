@@ -14,7 +14,7 @@ object FIFOScheduler {
     override def compare(o1: (String, Int, Long), o2: (String, Int, Long)): Int = {
       if (o1._2 == o2._2)
         return (o1._3 - o2._3).asInstanceOf[Int]
-      else return o1._2 - o2._2
+      else return o2._2-o1._2
     }
   })
 
@@ -34,28 +34,10 @@ object FIFOScheduler {
           BeeManager.getMostFreeBee() match {
             case Some(beeId) =>
               job.status=JobStatus.RUNNING
-              task.status = TaskStatus.STARTED
-              /*
-               * 将要把task分到该bee上
-               */
-              var attempts = JobManager.getAttempts(task.taskId)
-              val attemptPostfix = attempts.length+1
-              val newAttempt = new TaskAttemptInfo(task, task.taskId+ "-attempt-" + attemptPostfix)
-              val attemptsBuffer = ArrayBuffer() ++ attempts
-              attemptsBuffer += newAttempt
-              attempts = attemptsBuffer.toArray
-              JobManager.setAttempts(task.taskId,attempts)
-
-              JobManager.mapBeeAttempt(beeId,newAttempt.attemptId)
-
-              JobManager.updateAttempt(newAttempt)
-
+              val newAttempt = JobManager.addAttempt(job,task)
+              JobManager.mapBeeAttempt(beeId,newAttempt)
               buffer += ((beeId, newAttempt))
-              job.appendTasks -= task
-              job.runningTasks += task
-              val bee = BeeManager.getBee(beeId)
-              bee.runningWorker += 1
-              BeeManager.updateBee(bee)
+              BeeManager.busyBee(beeId)
             case _ => flag = false
           }
         }

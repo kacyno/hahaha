@@ -44,4 +44,10 @@ object BeeManager {
         None
     }
   }
+  def freeBee(beeId:String): Unit =synchronized{
+    connDic(beeId).runningWorker-=1
+  }
+  def busyBee(beeId:String): Unit =synchronized{
+    connDic(beeId).runningWorker+=1
+  }
 }
