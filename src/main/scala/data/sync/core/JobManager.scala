@@ -82,7 +82,7 @@ object JobManager {
     val now = new Date().getTime
     for (attemptId <- attempt2bee.keys()) {
       //两分钟没有汇报状态的将重新生成一个attempt并行执行
-      if (now - attempt2report(attemptId).time > 2 * 60 * 1000) {
+      if (now - attempt2report(attemptId).time > 2 * 60 * 1000&&attempt2report(attemptId).status!=TaskAttemptStatus.FAILED&&attempt2report(attemptId).status!=TaskAttemptStatus.FINSHED) {
         val task = taskAttemptDic(attemptId).taskDesc
         val job = jobDic(task.jobId)
         job.runningTasks -= task
