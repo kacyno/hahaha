@@ -1,5 +1,6 @@
 package data.sync.core
 
+import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 
 import data.sync.common.ClientMessages.DBInfo
@@ -66,9 +67,21 @@ object JobManager {
   def removeReport(attemptId: String): Unit = {
     attempt2report -= attemptId
   }
-
-  def checkTimeOut(): Unit = {
-    //TODO: 对于长时间未汇报状态或长时间没有进度的任务处理
+  //对长时间没有状态更新的任务启动并行
+  def checkTimeOut(): Boolean = {
+    var needAssign = false
+    val now = new Date().getTime
+    for(attemptId<-attempt2bee.keys()){
+      //两分钟没有汇报状态的将重新生成一个attempt并行执行
+      if(now - attempt2report(attemptId).time>2*60*1000) {
+        val task = taskAttemptDic(attemptId).taskDesc
+        val job = jobDic(task.jobId)
+        job.runningTasks-=task
+        job.appendTasks+=task
+        needAssign = true
+      }
+    }
+    needAssign
   }
 
 
@@ -81,7 +94,9 @@ object JobManager {
   }
 
   def processReport(beeId: String, report: BeeAttemptReport, queen: Queen): Unit = {
-    updateReport(report)
+    var ar = attempt2report.getOrElse(report.attemptId,null)
+    if(ar==null||ar.readNum!=report.readNum||ar.writeNum!=report.writeNum||report.status!=ar.status)//只对变更的汇报进行更新
+      updateReport(report)
     val apt = taskAttemptDic(report.attemptId)
     apt.status = report.status
     val task = apt.taskDesc
@@ -135,6 +150,7 @@ object JobManager {
         }
       }
       FIFOScheduler.delJob(job)
+      fs.delete(new Path(job.targetDir + "tmp/"), true) //失败的任务可能在删文件时还在操作，只删成功的
     }
     clearJob(jobId)
   }
@@ -168,7 +184,7 @@ object JobManager {
     JobHistory.dumpMemJob(jobId)
     //清理数据
     val job = jobDic(jobId)
-    fs.delete(new Path(job.targetDir + "tmp/"), true)
+
     val tasks = job.appendTasks ++ job.runningTasks ++ job.finishedTasks
     for (task <- tasks) {
       for (attempt <- taskDic(task.taskId)) {

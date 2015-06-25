@@ -23,4 +23,12 @@ public class NetUtil {
 		}
 		return isas;
 	}
+	public static String getHostname() {
+		try {return "" + InetAddress.getLocalHost().getHostName();}
+		catch(UnknownHostException uhe) {return "" + uhe;}
+	}
+
+	public static void main(String[] args) {
+		System.out.println(getHostname());
+	}
 }

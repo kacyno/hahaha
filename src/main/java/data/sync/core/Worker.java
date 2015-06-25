@@ -30,9 +30,6 @@ import java.util.Properties;
 public class Worker {
     private static Logger logger = Logger.getLogger(Worker.class);
 
-    public static enum WorkerStatus{
-        START,RUNNING,END
-    }
     //任务的相关信息
     private ClusterMessages.TaskAttemptInfo attempt;
     private Storage storage;
@@ -43,17 +40,34 @@ public class Worker {
     //bee引用，用来更新状态
     private Bee bee;
     //worker状态
-    private volatile WorkerStatus status ;
+    private String error;
+
+
+    public String getError() {
+        return error;
+    }
+
+    private long readCount  =0;
+    public long getReadCount() {
+        return readCount;
+    }
+    private long writeCount =0;
+
+    public long getWriteCount() {
+        return writeCount;
+    }
+    public ClusterMessages.TaskAttemptInfo getAttempt() {
+        return attempt;
+    }
     public Worker(ClusterMessages.TaskAttemptInfo attempt,Bee bee) throws IOException {
         this.attempt = attempt;
         storage = new RAMStorage();
         storage.init("1",100,100,100);
         fetcher = new Fetcher(attempt,storage,bee);
-        sinker = new Sinker(this,attempt,bee,storage);
+        sinker = new Sinker(attempt,bee,storage);
     }
-
-    public WorkerStatus getStatus() {
-        return status;
+    public String getJobId(){
+        return attempt.taskDesc().jobId();
     }
 
     public Fetcher getFetcher(){
@@ -63,7 +77,8 @@ public class Worker {
         return sinker;
     }
 
-    public static class Fetcher implements Runnable{
+    public class Fetcher implements Runnable{
+        private volatile boolean stop = false;
         private final String dbname;
         private final String user;
         private final String pwd;
@@ -74,6 +89,8 @@ public class Worker {
         private final Bee bee;
         private final Storage storage;
         private final String encode ="utf8";
+
+
         public Fetcher(ClusterMessages.TaskAttemptInfo attempt,Storage storage,Bee bee){
             this.dbname = attempt.taskDesc().db();
             this.ip = attempt.taskDesc().ip();
@@ -126,33 +143,40 @@ public class Worker {
                         l.addField(rs.getString(i));
                     storage.push(l);
                 }
-                while(rs.next()){
+                while(rs.next()&&!stop){
                     Line l = storage.createLine();
                     for(int i=1;i<=size;i++)
                         l.addField(rs.getString(i));
                     storage.push(l);
+                    readCount++;
                 }
                 storage.setPushClosed(true);
                 logger.info("fetcher cost:"+(System.currentTimeMillis()-start));
             } catch (SQLException e) {
-                e.printStackTrace();
+                error = e.getMessage();
+                bee.failTask(Worker.this);
+                logger.info("fecher:"+attempt.toString(),e);
             }
 
         }
+        public void stop(){
+            stop = true;
+        }
     }
-    public static class Sinker implements Runnable{
+    public  class Sinker implements Runnable{
         public static final char SEPARATOR = 0x01;
         private final FileSystem fs;
         private final Storage storage;
         private final Bee bee;
         private final Path target;
-        private final Worker worker;
-        public Sinker(Worker worker,ClusterMessages.TaskAttemptInfo attempt,Bee bee,Storage storage) throws IOException {
+        private volatile boolean stop = false;
+
+
+        public Sinker(ClusterMessages.TaskAttemptInfo attempt,Bee bee,Storage storage) throws IOException {
             Configuration conf = new Configuration();
             this.fs = FileSystem.get(conf);
             this.bee = bee;
             this.storage = storage;
-            this.worker = worker;
             this.target = new Path(attempt.taskDesc().targetDir()+"/"+attempt.attemptId());
         }
         @Override
@@ -162,15 +186,22 @@ public class Worker {
                 storage.sinkThread = Thread.currentThread();
                 PrintWriter pw = new PrintWriter(new OutputStreamWriter(fs.create(target)));
                 Line l = null;
-                while((l = storage.pull())!=null){
+                while((l = storage.pull())!=null&&!stop){
                     pw.println(l.toString(SEPARATOR));
+                    writeCount++;
                 }
                 pw.close();
                 logger.info("sinker cost:"+(System.currentTimeMillis()-start));
-                bee.finishTask(worker);
+                bee.successTask(Worker.this);
             } catch (IOException e) {
-                e.printStackTrace();
+                error = e.getMessage();
+                bee.failTask(Worker.this);
+                logger.info("sinker:"+attempt.toString(),e);
             }
+        }
+        public void stop(){
+            stop = true;
+            storage.sinkThread.interrupt();
         }
     }
 

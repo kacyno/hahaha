@@ -14,4 +14,29 @@
         <value>100</value>
         <description>http服务最大线程数</description>
     </property>
+    <property>
+        <name>queen.port</name>
+        <value>43935</value>
+        <description></description>
+    </property>
+    <property>
+        <name>queen.addr</name>
+        <value>0.0.0.0</value>
+        <description></description>
+    </property>
+    <property>
+        <name>bee.port</name>
+        <value>43933</value>
+        <description></description>
+    </property>
+    <property>
+        <name>bee.addr</name>
+        <value>0.0.0.0</value>
+        <description></description>
+    </property>
+    <property>
+        <name>bee.worker.num</name>
+        <value>10</value>
+        <description></description>
+    </property>
 </configuration>

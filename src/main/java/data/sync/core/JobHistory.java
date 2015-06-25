@@ -1,8 +1,11 @@
 package data.sync.core;
 
+import data.sync.common.Configuration;
+import data.sync.common.Constants;
+
 import static data.sync.common.ClusterMessages.*;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +14,12 @@ import java.util.Set;
  * Created by hesiyuan on 15/6/24.
  */
 public class JobHistory {
+    public static final String HISTORY_DIR;
+    static{
+        Configuration conf = new Configuration();
+        conf.addResource(Constants.CONFIGFILE_NAME);
+        HISTORY_DIR = conf.get(Constants.HISTORY_DIR,Constants.HISTORY_DIR_DEFAULT);
+    }
 
     /*
      * 获得正在运行的一个job
@@ -29,7 +38,7 @@ public class JobHistory {
             if(attempt.length>0) {
                 for (int i = 0; i < attempt.length; i++) {
                     BeeAttemptReport report = JobManager.getReport(attempt[i].attemptId());
-                    attempts.add(new HAttempt(attempt[i].attemptId(),report.processNum(),new Date(report.time()),report.error(),report.status()));
+                    attempts.add(new HAttempt(attempt[i].attemptId(),report.readNum(),report.writeNum(),new Date(report.time()),report.error(),report.status()));
                 }
             }
             HTask htask = HTask.generateFormTaskInfo(task);
@@ -58,8 +67,12 @@ public class JobHistory {
      * 将一个运行完的Job存为文件
      * 来源JobManager
      */
-    public static void dumpMemJob(String JobId){
-
+    public static void dumpMemJob(String jobId) throws IOException {
+        FileOutputStream fis = new FileOutputStream(HISTORY_DIR+jobId);
+        ObjectOutputStream oos = new ObjectOutputStream(fis);
+        HJob job = getMemHjob(jobId);
+        oos.writeObject(job);
+        oos.close();
     }
 
     public static class HJob implements Serializable {
@@ -258,17 +271,34 @@ public class JobHistory {
 
     public static class HAttempt implements Serializable {
         private String attemptId;
-        private int processNum;
         private Date finishTime;
         private String error;
         private TaskAttemptStatus status;
-
-        public HAttempt(String attemptId, int processNum, Date finishTime, String error, TaskAttemptStatus status) {
+        private long readNum;
+        private long writeNum;
+        public HAttempt(String attemptId,long readNum, long writeNum, Date finishTime, String error, TaskAttemptStatus status) {
             this.attemptId = attemptId;
-            this.processNum = processNum;
+            this.readNum = readNum;
+            this.writeNum = writeNum;
             this.finishTime = finishTime;
             this.error = error;
             this.status = status;
+        }
+
+        public long getReadNum() {
+            return readNum;
+        }
+
+        public void setReadNum(long readNum) {
+            this.readNum = readNum;
+        }
+
+        public long getWriteNum() {
+            return writeNum;
+        }
+
+        public void setWriteNum(long writeNum) {
+            this.writeNum = writeNum;
         }
 
         public String getAttemptId() {
@@ -279,13 +309,6 @@ public class JobHistory {
             this.attemptId = attemptId;
         }
 
-        public int getProcessNum() {
-            return processNum;
-        }
-
-        public void setProcessNum(int processNum) {
-            this.processNum = processNum;
-        }
 
         public Date getFinishTime() {
             return finishTime;

@@ -7,7 +7,7 @@ import akka.actor.{Address, ActorRef}
 /**
  * Created by hesiyuan on 15/6/23.
  */
-case class BeeDesc(var runningWorker:Int,var tatolWorker:Int,beeId:String,hostPort:String,sender:ActorRef  )
+case class BeeDesc(var runningWorker:Int,var tatolWorker:Int,beeId:String,sender:ActorRef  )
 object BeeManager {
   var connDic = new ConcurrentHashMap[String,BeeDesc]()
   var addressDic = new ConcurrentHashMap[Address,String]
@@ -22,6 +22,10 @@ object BeeManager {
   }
   def getBeeByAddress(address:Address):BeeDesc={
     return connDic(addressDic(address))
+  }
+  //提供给web展现
+  def getAllBeeInfo()={
+    connDic
   }
   //找出最闲的Bee
   def getMostFreeBee():Option[String]={

@@ -3,7 +3,7 @@ package data.sync.common;
 /**
  * Created by hesiyuan on 15/1/30.
  */
-public interface  Constants {
+public interface Constants {
     String CONFIGFILE_NAME = "honeycombx.xml";
     //http设置
     String HTTP_ADDR = "http.addr";
@@ -12,4 +12,28 @@ public interface  Constants {
     int HTTP_PORT_DEFAULT = 43933;
     String HTTP_MAX_THREADS = "http.max.threads";
     int HTTP_MAX_THREDS_DEFALUT = 100;
+
+    String QUEEN_NAME = "queen";
+    String BEE_NAME = "bee";
+
+    String QUEEN_PORT = "queen.port";
+    int QUEEN_PORT_DEFAULT = 43935;
+
+    String QUEEN_ADDR = "queen.addr";
+    String QUEEN_ADDR_DEFAULT = "0.0.0.0";
+
+    String BEE_PORT = "bee.port";
+    int BEE_PORT_DEFAULT = 43933;
+
+    String BEE_ADDR = "bee.addr";
+    String BEE_ADDR_DEFAULT = "0.0.0.0";
+
+    String BEE_WORKER_NUM = "bee.worker.num";
+    int BEE_WORKER_NUM_DEFAULT = 10;
+
+    int QUEEN_CHECKER_INTERVAL= 10*1000;
+    int BEE_HEATBEATER_INTERVAL = 2*1000;
+
+    String HISTORY_DIR = "history.dir";
+    String HISTORY_DIR_DEFAULT = "./";
 }

@@ -29,11 +29,11 @@ object AkkaUtils extends Logging {
                          name: String,
                          host: String,
                          port: Int
-                       ): (ActorSystem, Int) = {
+                         ): (ActorSystem, Int) = {
     val startService: Int => (ActorSystem, Int) = { actualPort =>
       doCreateActorSystem(name, host, actualPort)
     }
-    startServiceOnPort(port, startService,  name)
+    startServiceOnPort(port, startService, name)
   }
 
   private def doCreateActorSystem(
@@ -41,9 +41,9 @@ object AkkaUtils extends Logging {
                                    host: String,
                                    port: Int
 
-                                  ): (ActorSystem, Int) = {
+                                   ): (ActorSystem, Int) = {
 
-    val akkaThreads   = 4
+    val akkaThreads = 4
     val akkaBatchSize = 15
     val akkaTimeout = 120
     val akkaFrameSize = maxFrameSizeBytes()
@@ -55,24 +55,24 @@ object AkkaUtils extends Logging {
       Option(Logger.getLogger("akka.remote.EndpointWriter")).map(l => l.setLevel(Level.FATAL))
     }
 
-    val logAkkaConfig ="off" //if (conf.getBoolean("spark.akka.logAkkaConfig", false)) "on" else "off"
+    val logAkkaConfig = "off" //if (conf.getBoolean("spark.akka.logAkkaConfig", false)) "on" else "off"
 
     val akkaHeartBeatPauses = 6000
     val akkaHeartBeatInterval = 1000
 
-//    val secretKey = securityManager.getSecretKey()
-//    val isAuthOn = securityManager.isAuthenticationEnabled()
-//    if (isAuthOn && secretKey == null) {
-//      throw new Exception("Secret key is null with authentication on")
-//    }
-    val requireCookie = "off"//if (isAuthOn) "on" else "off"
+    //    val secretKey = securityManager.getSecretKey()
+    //    val isAuthOn = securityManager.isAuthenticationEnabled()
+    //    if (isAuthOn && secretKey == null) {
+    //      throw new Exception("Secret key is null with authentication on")
+    //    }
+    val requireCookie = "off" //if (isAuthOn) "on" else "off"
     val secureCookie = "" //if (isAuthOn) secretKey else ""
     logDebug(s"In createActorSystem, requireCookie is: $requireCookie")
 
-//    val akkaSslConfig = securityManager.akkaSSLOptions.createAkkaConfig
-//      .getOrElse(ConfigFactory.empty())
+    //    val akkaSslConfig = securityManager.akkaSSLOptions.createAkkaConfig
+    //      .getOrElse(ConfigFactory.empty())
 
-    val akkaConf = ConfigFactory.parseMap(scala.collection.mutable.Map[String,String]())
+    val akkaConf = ConfigFactory.parseMap(scala.collection.mutable.Map[String, String]())
       .withFallback(ConfigFactory.parseString(
       s"""
          |akka.daemonic = on
@@ -80,22 +80,22 @@ object AkkaUtils extends Logging {
          |akka.stdout-loglevel = "ERROR"
          |akka.jvm-exit-on-fatal-error = off
          |akka.remote.require-cookie = "$requireCookie"
-                                                        |akka.remote.secure-cookie = "$secureCookie"
-                                                                                                     |akka.remote.transport-failure-detector.heartbeat-interval = $akkaHeartBeatInterval s
-                                                                                                                                                                                          |akka.remote.transport-failure-detector.acceptable-heartbeat-pause = $akkaHeartBeatPauses s
-                                                                                                                                                                                                                                                                                     |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-                                                                                                                                                                                                                                                                                     |akka.remote.netty.tcp.transport-class = "akka.remote.transport.netty.NettyTransport"
-                                                                                                                                                                                                                                                                                     |akka.remote.netty.tcp.hostname = "$host"
-                                                                                                                                                                                                                                                                                                                               |akka.remote.netty.tcp.port = $port
-          |akka.remote.netty.tcp.tcp-nodelay = on
-          |akka.remote.netty.tcp.connection-timeout = $akkaTimeout s
-                                                                    |akka.remote.netty.tcp.maximum-frame-size = ${akkaFrameSize}B
-                                                                                                                                  |akka.remote.netty.tcp.execution-pool-size = $akkaThreads
-          |akka.actor.default-dispatcher.throughput = $akkaBatchSize
-          |akka.log-config-on-start = $logAkkaConfig
-          |akka.remote.log-remote-lifecycle-events = $lifecycleEvents
-          |akka.log-dead-letters = $lifecycleEvents
-          |akka.log-dead-letters-during-shutdown = $lifecycleEvents
+         |akka.remote.secure-cookie = "$secureCookie"
+         |akka.remote.transport-failure-detector.heartbeat-interval = $akkaHeartBeatInterval s
+         |akka.remote.transport-failure-detector.acceptable-heartbeat-pause = $akkaHeartBeatPauses s
+         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
+         |akka.remote.netty.tcp.transport-class = "akka.remote.transport.netty.NettyTransport"
+         |akka.remote.netty.tcp.hostname = "$host"
+         |akka.remote.netty.tcp.port = $port
+         |akka.remote.netty.tcp.tcp-nodelay = on
+         |akka.remote.netty.tcp.connection-timeout = $akkaTimeout s
+         |akka.remote.netty.tcp.maximum-frame-size = ${akkaFrameSize}B
+         |akka.remote.netty.tcp.execution-pool-size = $akkaThreads
+         |akka.actor.default-dispatcher.throughput = $akkaBatchSize
+         |akka.log-config-on-start = $logAkkaConfig
+         |akka.remote.log-remote-lifecycle-events = $lifecycleEvents
+         |akka.log-dead-letters = $lifecycleEvents
+         |akka.log-dead-letters-during-shutdown = $lifecycleEvents
       """.stripMargin))
 
     val actorSystem = ActorSystem(name, akkaConf)
@@ -184,7 +184,7 @@ object AkkaUtils extends Logging {
       s"Error sending message [message = $message]", lastException)
   }
 
-  def makeDriverRef(name: String,  actorSystem: ActorSystem): ActorRef = {
+  def makeDriverRef(name: String, actorSystem: ActorSystem): ActorRef = {
     val driverActorSystemName = "Queen"
     val driverHost: String = "localhost"
     val driverPort: Int = 7077
@@ -228,6 +228,7 @@ object AkkaUtils extends Logging {
                actorName: String): String = {
     s"$protocol://$systemName@$host:$port/user/$actorName"
   }
+
   def startServiceOnPort[T](
                              startPort: Int,
                              startService: Int => (T, Int),
@@ -247,7 +248,7 @@ object AkkaUtils extends Logging {
         logInfo(s"Successfully started service$serviceString on port $port.")
         return (service, port)
       } catch {
-        case e: Exception  =>
+        case e: Exception =>
           if (offset >= maxRetries) {
             val exceptionMessage =
               s"${e.getMessage}: Service$serviceString failed after $maxRetries retries!"

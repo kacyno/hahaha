@@ -106,7 +106,7 @@ public class HttpServer {
 
     public static Connector createDefaultChannelConnector() {
         SelectChannelConnector ret = new SelectChannelConnector();
-        ret.setLowResourceMaxIdleTime(10000);
+        ret.setLowResourcesMaxIdleTime(10000);
         ret.setAcceptQueueSize(128);
         ret.setResolveNames(false);
         ret.setUseDirectBuffers(false);

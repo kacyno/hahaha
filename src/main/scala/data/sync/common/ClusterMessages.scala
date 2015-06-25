@@ -10,10 +10,10 @@ sealed trait ClusterMessage extends Serializable
 object ClusterMessages {
 
   //Bee注册时使用，要声明自己有多少worker
-  case class RegisterBee(beeId: String, hostPort: String, workerNum: Int) extends ClusterMessage
+  case class RegisterBee(workerNum: Int) extends ClusterMessage
 
   //注册后Queen的返回
-  case object RegisteredBee extends ClusterMessage
+  case class RegisteredBee(beeId:String) extends ClusterMessage
 
   //
   case class TaskInfo(taskId: String,
@@ -26,7 +26,6 @@ object ClusterMessages {
                       db: String,
                       table: String,
                       targetDir: String,
-                      attemptNum: Int,
                       var status:TaskStatus=TaskStatus.STARTED
                        ) extends Serializable
 
@@ -39,7 +38,8 @@ object ClusterMessages {
 
   case class BeeAttemptReport(
                                attemptId: String,
-                             processNum: Int,
+                             readNum: Long,
+                             writeNum:Long,
                              time:Long,
                              error: String="",
                              status: TaskAttemptStatus)
