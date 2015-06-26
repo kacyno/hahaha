@@ -3,7 +3,7 @@ package data.sync.core
 import java.util.{UUID, Comparator, PriorityQueue}
 import data.sync.common.ClusterMessages.TaskAttemptInfo
 import scala.collection.mutable.ArrayBuffer
-
+import scala.collection.JavaConversions._
 /**
  * Created by hesiyuan on 15/6/23.
  * 按优先级和提交时间排序
@@ -30,7 +30,8 @@ object FIFOScheduler {
       else {
         val (jobId, _, _) = iter.next()
         val job = JobManager.getJob(jobId)
-        for (task <- job.appendTasks) {
+        val tmp = job.appendTasks.clone()
+        for (task <- tmp) {
           BeeManager.getMostFreeBee() match {
             case Some(beeId) =>
               job.status=JobStatus.RUNNING

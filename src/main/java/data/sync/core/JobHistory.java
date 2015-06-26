@@ -6,6 +6,7 @@ import data.sync.common.Constants;
 import static data.sync.common.ClusterMessages.*;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -20,7 +21,7 @@ public class JobHistory {
         conf.addResource(Constants.CONFIGFILE_NAME);
         HISTORY_DIR = conf.get(Constants.HISTORY_DIR,Constants.HISTORY_DIR_DEFAULT);
     }
-
+    public static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     /*
      * 获得正在运行的一个job
      * 来源JobManager
@@ -28,9 +29,9 @@ public class JobHistory {
     public static HJob getMemHjob(String jobId) {
         JobInfo jobInfo = JobManager.getJob(jobId);
         Set<TaskInfo> tasks = new HashSet<TaskInfo>();
-        tasks.addAll(scala.collection.JavaConversions.asJavaSet(jobInfo.appendTasks()));
-        tasks.addAll(scala.collection.JavaConversions.asJavaSet(jobInfo.finishedTasks()));
-        tasks.addAll(scala.collection.JavaConversions.asJavaSet(jobInfo.runningTasks()));
+        tasks.addAll(jobInfo.appendTasks());
+        tasks.addAll(jobInfo.finishedTasks());
+        tasks.addAll(jobInfo.runningTasks());
         Set<HTask> htasks = new HashSet<HTask>();
         for(TaskInfo task:tasks){
             TaskAttemptInfo[] attempt = JobManager.getAttempts(task.taskId());
@@ -38,7 +39,7 @@ public class JobHistory {
             if(attempt.length>0) {
                 for (int i = 0; i < attempt.length; i++) {
                     BeeAttemptReport report = JobManager.getReport(attempt[i].attemptId());
-                    attempts.add(new HAttempt(attempt[i].attemptId(),report.readNum(),report.writeNum(),new Date(report.time()),report.error(),report.status()));
+                    attempts.add(new HAttempt(attempt[i].attemptId(),report.readNum(),report.writeNum(),format.format(new Date(report.time())),report.error(),report.status()));
                 }
             }
             HTask htask = HTask.generateFormTaskInfo(task);
@@ -78,7 +79,7 @@ public class JobHistory {
     public static class HJob implements Serializable {
         private String jobId;
         private int priority;
-        private Date submitTime;
+        private String submitTime;
         private String targetDir;
         private String jobDesc;
         private Set<HTask> tasks;
@@ -88,7 +89,7 @@ public class JobHistory {
             HJob job = new HJob();
             job.jobId = ji.jobId();
             job.priority = ji.priority();
-            job.submitTime = new Date(ji.submitTime());
+            job.submitTime = format.format(new Date(ji.submitTime()));
             job.targetDir = ji.targetDir();
             job.jobDesc = "";
             job.status = ji.status();
@@ -111,11 +112,11 @@ public class JobHistory {
             this.priority = priority;
         }
 
-        public Date getSubmitTime() {
+        public String getSubmitTime() {
             return submitTime;
         }
 
-        public void setSubmitTime(Date submitTime) {
+        public void setSubmitTime(String submitTime) {
             this.submitTime = submitTime;
         }
 
@@ -271,12 +272,12 @@ public class JobHistory {
 
     public static class HAttempt implements Serializable {
         private String attemptId;
-        private Date finishTime;
+        private String finishTime;
         private String error;
         private TaskAttemptStatus status;
         private long readNum;
         private long writeNum;
-        public HAttempt(String attemptId,long readNum, long writeNum, Date finishTime, String error, TaskAttemptStatus status) {
+        public HAttempt(String attemptId,long readNum, long writeNum, String finishTime, String error, TaskAttemptStatus status) {
             this.attemptId = attemptId;
             this.readNum = readNum;
             this.writeNum = writeNum;
@@ -310,11 +311,11 @@ public class JobHistory {
         }
 
 
-        public Date getFinishTime() {
+        public String getFinishTime() {
             return finishTime;
         }
 
-        public void setFinishTime(Date finishTime) {
+        public void setFinishTime(String finishTime) {
             this.finishTime = finishTime;
         }
 

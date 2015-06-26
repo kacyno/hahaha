@@ -1,13 +1,16 @@
 package data.sync.core
 
 import java.util.concurrent.ConcurrentHashMap
+import net.sf.json.{JSONArray, JSONObject}
+
+import scala.beans.BeanProperty
 import scala.collection.JavaConversions._
 import akka.actor.{Address, ActorRef}
 
 /**
  * Created by hesiyuan on 15/6/23.
  */
-case class BeeDesc(var runningWorker:Int,var tatolWorker:Int,beeId:String,sender:ActorRef  )
+case class BeeDesc(@BeanProperty var runningWorker:Int,@BeanProperty var tatolWorker:Int,@BeanProperty beeId:String,sender:ActorRef  )
 object BeeManager {
   var connDic = new ConcurrentHashMap[String,BeeDesc]()
   var addressDic = new ConcurrentHashMap[Address,String]
@@ -49,5 +52,8 @@ object BeeManager {
   }
   def busyBee(beeId:String): Unit =synchronized{
     connDic(beeId).runningWorker+=1
+  }
+  def getAllBeesJson():String={
+    JSONArray.fromObject(connDic.values()).toString()
   }
 }

@@ -1,6 +1,7 @@
 
 package data.sync.http.server;
 
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 import data.sync.common.Configuration;
 import data.sync.common.Constants;
 import data.sync.http.servlet.SysServlet;
@@ -87,10 +88,10 @@ public class HttpServer {
         webServer.setHandler(webAppContext);
         addDefaultServlets();
         //添加rest
-//        ServletHolder holder = new ServletHolder(ServletContainer.class);
-//        holder.setInitParameter("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.PackagesResourceConfig");
-//        holder.setInitParameter("com.sun.jersey.config.property.packages", "http.restful");
-//        webAppContext.addServlet(holder, "/rest/*");
+        ServletHolder holder = new ServletHolder(ServletContainer.class);
+        holder.setInitParameter("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.PackagesResourceConfig");
+        holder.setInitParameter("com.sun.jersey.config.property.packages", "http.restful");
+        webAppContext.addServlet(holder, "/rest/*");
 
     }
 

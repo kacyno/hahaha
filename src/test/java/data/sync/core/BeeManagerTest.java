@@ -5,6 +5,8 @@ import org.junit.Test;
 import scala.Tuple3;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by hesiyuan on 15/6/25.
@@ -20,7 +22,7 @@ public class BeeManagerTest {
         ClusterMessages.TaskInfo t6 = new ClusterMessages.TaskInfo("t6","test-job1","","","","","","","","",TaskStatus.STARTED);
         ClusterMessages.TaskInfo t7 = new ClusterMessages.TaskInfo("t7","test-job1","","","","","","","","",TaskStatus.STARTED);
         ClusterMessages.TaskInfo t8 = new ClusterMessages.TaskInfo("t8","test-job1","","","","","","","","",TaskStatus.STARTED);
-        scala.collection.mutable.HashSet<ClusterMessages.TaskInfo> tasks = new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>();
+        Set<ClusterMessages.TaskInfo> tasks = new HashSet<ClusterMessages.TaskInfo>();
         tasks.add(t1);
         tasks.add(t2);
         tasks.add(t3);
@@ -38,8 +40,8 @@ public class BeeManagerTest {
                 "",
                 null,
                 tasks,
-                new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>(),
-                new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>(),
+                new HashSet<ClusterMessages.TaskInfo>(),
+                new HashSet<ClusterMessages.TaskInfo>(),
                 JobStatus.SUBMITED
         );
 
@@ -48,9 +50,9 @@ public class BeeManagerTest {
                 new Date().getTime()-10000,
                 "",
                 null,
-                new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>(),
-                new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>(),
-                new scala.collection.mutable.HashSet<ClusterMessages.TaskInfo>(),
+                new HashSet<ClusterMessages.TaskInfo>(),
+                new HashSet<ClusterMessages.TaskInfo>(),
+                new HashSet<ClusterMessages.TaskInfo>(),
                 JobStatus.SUBMITED
         );
 
@@ -72,6 +74,10 @@ public class BeeManagerTest {
         for(int i=0;i<assigns.length;i++){
             System.out.println(assigns[i]);
         }
-        JobManager.printMem();
+//        JobManager.printMem();
+        System.out.println(JobManager.getAllJobJson());
+        System.out.println(BeeManager.getAllBeesJson());
+        System.out.println(JobManager.getJobJson("test-job1"));
+
     }
 }

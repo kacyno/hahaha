@@ -6,13 +6,13 @@ import data.sync.common.ClusterMessages.TaskInfo
 import data.sync.common.{DBUtils, DBSource}
 import org.apache.commons.lang.StringUtils
 import scala.collection.mutable
-
+import scala.collection.JavaConversions._
 /**
  * Created by hesiyuan on 15/6/24.
  */
 object SimpleSplitter extends Splitter {
-  override def split(jobId: String, dbinfos: Array[DBInfo], num: Int, dir: String): mutable.Set[TaskInfo] = {
-    var set = mutable.Set[TaskInfo]()
+  override def split(jobId: String, dbinfos: Array[DBInfo], num: Int, dir: String): java.util.Set[TaskInfo] = {
+    var set = new java.util.HashSet[TaskInfo]()
     val tableNum = dbinfos.foldLeft(0)((r, d) => r + d.tables.size)
     var i = 0;
 

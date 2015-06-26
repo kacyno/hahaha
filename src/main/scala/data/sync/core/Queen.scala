@@ -88,8 +88,8 @@ class Queen extends Actor with ActorLogReceive with Logging {
       dir,
       dbinfos,
       tasks,
-      scala.collection.mutable.Set[TaskInfo](),
-      scala.collection.mutable.Set[TaskInfo](),
+      new java.util.HashSet[TaskInfo](),
+      new java.util.HashSet[TaskInfo](),
       JobStatus.SUBMITED
     )
     JobManager.addJob(job)
