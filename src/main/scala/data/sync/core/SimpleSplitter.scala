@@ -31,18 +31,23 @@ object SimpleSplitter extends Splitter {
        */
       val tableInfo = mutable.Map[String, (Long, Long)]()
       var sql = "select min(%s),max(%s) from %s"
+
       for (db <- dbinfos) {
         DBSource.register(this.getClass, db.ip, db.port, db.db, createProperties("utf-8", db.ip, db.port, db.db, db.user, db.pwd))
         for (table <- db.tables) {
           val conn = DBSource.getConnection(this.getClass, db.ip, db.port, db.db)
-          val rs = DBUtils.query(conn, sql.format(db.indexFiled, db.indexFiled, table))
-          var min = 0l;
-          var max = 0l;
-          if (rs.next()) {
-            min = rs.getLong(1);
-            max = rs.getLong(2);
+          try {
+            val rs = DBUtils.query(conn, sql.format(db.indexFiled, db.indexFiled, table))
+            var min = 0l;
+            var max = 0l;
+            if (rs.next()) {
+              min = rs.getLong(1);
+              max = rs.getLong(2);
+            }
+            tableInfo(table) = (min, max)
+          }finally{
+            conn.close()
           }
-          tableInfo(table) = (min, max)
         }
       }
       val totalNum = tableInfo.foldLeft(0l)((n, e) => n + e._2._2 - e._2._1)
@@ -60,7 +65,7 @@ object SimpleSplitter extends Splitter {
             }else
               cond = " and " + cond
             if (j == p)
-              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
+              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2+1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
             else
               set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
             i += 1

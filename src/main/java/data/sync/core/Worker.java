@@ -119,9 +119,9 @@ public class Worker {
             p.setProperty("url", url);
             p.setProperty("username", user);
             p.setProperty("password", pwd);
-            p.setProperty("maxActive", "10");
+            p.setProperty("maxActive", "40");
             p.setProperty("initialSize", "10");
-            p.setProperty("maxIdle", "1");
+            p.setProperty("maxIdle", "10");
             p.setProperty("maxWait", "1000");
             p.setProperty("defaultReadOnly", "true");
             p.setProperty("testOnBorrow", "true");
