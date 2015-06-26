@@ -105,11 +105,11 @@ object JobManager {
    * 将bee不再执行一个attempt时调用此方法
    */
   def removeBeeAttempt(beeId: String, attemptId: String): Unit = {
-    if(attempt2bee.contains(attemptId)) {
+    if(attempt2bee.containsKey(attemptId))
       attempt2bee -= attemptId
       var s = bee2attempt.getOrElse(beeId, new util.HashSet[String]())
       s -= attemptId
-    }
+
   }
 
   def getAttempts(taskId: String): Array[TaskAttemptInfo] = {
@@ -285,7 +285,8 @@ object JobManager {
     val tasks = job.appendTasks ++ job.runningTasks ++ job.finishedTasks
     for (task <- tasks) {
       for (attempt <- taskDic(task.taskId)) {
-        removeBeeAttempt(attempt2bee(attempt.attemptId), attempt.attemptId)
+        if(attempt2bee.containsKey(attempt.attemptId))
+          removeBeeAttempt(attempt2bee(attempt.attemptId), attempt.attemptId)
         attempt2report -= attempt.attemptId
         taskAttemptDic -= attempt.attemptId
       }

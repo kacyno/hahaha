@@ -65,6 +65,7 @@ class Bee(conf:Configuration) extends Logging {
   开始任务
    */
   private def startTask(tad: TaskAttemptInfo) = synchronized {
+    logInfo("Get Task:"+tad)
     val worker = new Worker(tad, this)
     worker.getAttempt.status = TaskAttemptStatus.RUNNING
     executorPool.execute(worker.getFetcher)
@@ -113,9 +114,13 @@ class Bee(conf:Configuration) extends Logging {
     val t = new Thread() {
       override def run() {
         while (true) {
-          updateStatus()
-          Thread.sleep(interval)
-        }
+          try {
+            updateStatus()
+            Thread.sleep(interval)
+          }catch{
+            case e : Throwable=> logInfo("heartbeat erro",e)
+          }
+          }
       }
     }
     t.setDaemon(true)

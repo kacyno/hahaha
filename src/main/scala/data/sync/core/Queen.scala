@@ -3,7 +3,7 @@ package data.sync.core
 import java.util.Date
 import akka.actor.{ActorRef, Props, Actor}
 import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
-import data.sync.common.ClientMessages.{DBInfo, SubmitJob}
+import data.sync.common.ClientMessages.{SubmitResult, DBInfo, SubmitJob}
 import data.sync.common._
 import data.sync.common.ClusterMessages._
 import data.sync.common.Logging
@@ -24,11 +24,14 @@ class Queen extends Actor with ActorLogReceive with Logging {
       assignTask()
     case SubmitJob(priority, dbinfos, taskNum, targetDir) =>
       logInfo("submit job from " + sender.path.address)
-      submitJob(priority, dbinfos, taskNum, targetDir)
+      val jobId = submitJob(priority, dbinfos, taskNum, targetDir)
+      sender ! SubmitResult(jobId)
     case StatusUpdate(beeId, reports) => updateBees(beeId, reports)
     case x: DisassociatedEvent =>
       removeBee(x)
       logWarning(s"Received irrelevant DisassociatedEvent $x")
+    case other=>
+      logInfo(other.toString)
   }
 
   /*
@@ -112,6 +115,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
   def assignTask(): Unit = {
     val assigns = FIFOScheduler.assigns
     for ((beeId, tad) <- assigns) {
+      logInfo("send task: "+tad +" to bee:"+beeId)
       BeeManager.getBee(beeId).sender ! StartTask(tad)
     }
   }
@@ -125,8 +129,12 @@ class Queen extends Actor with ActorLogReceive with Logging {
       override def run() {
         while (true) {
           Thread.sleep(interval)
-          if (JobManager.checkTimeOut())
-            assignTask()
+          try {
+            if (JobManager.checkTimeOut())
+              assignTask()
+          }catch{
+            case e : Throwable=>logInfo("checker error",e)
+          }
         }
       }
     }
