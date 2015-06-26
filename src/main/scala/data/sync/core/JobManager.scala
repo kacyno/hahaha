@@ -197,7 +197,7 @@ object JobManager {
   }
 
   def removeAttemptByBee(beeId: String, queen: Queen): Unit = {
-    for (atpId <- bee2attempt(beeId)) {
+    for (atpId <- bee2attempt.getOrElse(beeId,new util.HashSet[String]())) {
       attempt2bee -= atpId
       val atp = taskAttemptDic(atpId)
       val task = atp.taskDesc
@@ -291,7 +291,7 @@ object JobManager {
     JSONObject.fromObject(JobHistory.getMemHjob(jobId)).toString()
   }
   def getAttemptsByBee(beeId:String):util.Set[(TaskAttemptInfo,BeeAttemptReport)]={
-    val attemptIds = bee2attempt.get(beeId,new util.HashSet[String]())
+    val attemptIds = bee2attempt.getOrElse(beeId,new util.HashSet[String]())
     attemptIds.map(id=>{
       (taskAttemptDic(id),attempt2report(id))
     })

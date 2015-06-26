@@ -13,13 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        Map<Integer,Integer> map = new HashMap<Integer, Integer>();
+        Map<Integer,Integer> map = new ConcurrentHashMap<Integer, Integer>();
         map = Collections.synchronizedMap(map);
         map.put(1,1);
-        map.put(2,2);
-        for(Integer k : map.keySet()){
-            map.remove(1);
-            System.out.println(map);
-        }
+        map.get(null);
+//        map.put(2,2);
+//        for(Integer k : map.keySet()){
+//            map.remove(1);
+//            System.out.println(map);
+//        }
     }
 }

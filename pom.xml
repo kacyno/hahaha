@@ -147,11 +147,17 @@
             <artifactId>javax.servlet-api</artifactId>
             <version>3.0.1</version>
         </dependency>
-        <dependency>
-            <groupId>com.sun.jersey.glassfish.v3.osgi</groupId>
-            <artifactId>jersey-gf-bundle</artifactId>
-            <version>1.0.3</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
+            <!--<artifactId>jersey-gf-bundle</artifactId>-->
+            <!--<version>1.0.3</version>-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<artifactId>jackson-asl</artifactId>-->
+                    <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>

@@ -2,7 +2,7 @@ package data.sync.core
 
 import java.util.Date
 import akka.actor.{ActorRef, Props, Actor}
-import akka.remote.DisassociatedEvent
+import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
 import data.sync.common.ClientMessages.{DBInfo, SubmitJob}
 import data.sync.common._
 import data.sync.common.ClusterMessages._
@@ -13,14 +13,18 @@ import data.sync.http.server.HttpServer
  * Created by hesiyuan on 15/6/19.
  */
 class Queen extends Actor with ActorLogReceive with Logging {
+  override def preStart() {
+    context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
+  }
+
   override def receiveWithLogging = {
     case RegisterBee(cores) =>
       val beeId = registerBee(cores, sender)
       sender ! ClusterMessages.RegisteredBee(beeId)
       assignTask()
     case SubmitJob(priority, dbinfos, taskNum, targetDir) =>
-        logInfo("submit job from " +sender.path.address)
-//      submitJob(priority, dbinfos, taskNum, targetDir)
+      logInfo("submit job from " + sender.path.address)
+      submitJob(priority, dbinfos, taskNum, targetDir)
     case StatusUpdate(beeId, reports) => updateBees(beeId, reports)
     case x: DisassociatedEvent =>
       removeBee(x)
@@ -34,9 +38,11 @@ class Queen extends Actor with ActorLogReceive with Logging {
    */
   def removeBee(x: DisassociatedEvent): Unit = {
     val bee = BeeManager.getBeeByAddress(x.remoteAddress)
-    BeeManager.removeBee(bee.beeId)
-    JobManager.removeAttemptByBee(bee.beeId, this)
-    assignTask()
+    if (bee != null) {
+      BeeManager.removeBee(bee.beeId)
+      JobManager.removeAttemptByBee(bee.beeId, this)
+      assignTask()
+    }
   }
 
   /*
@@ -116,14 +122,14 @@ class Queen extends Actor with ActorLogReceive with Logging {
   def startChecker() {
     val interval = Constants.QUEEN_CHECKER_INTERVAL
     val t = new Thread() {
-        override def run() {
-          while (true) {
-            Thread.sleep(interval)
-            if (JobManager.checkTimeOut())
-              assignTask()
-          }
+      override def run() {
+        while (true) {
+          Thread.sleep(interval)
+          if (JobManager.checkTimeOut())
+            assignTask()
         }
       }
+    }
     t.setDaemon(true)
     t.setName("Queue Checker")
     t.start()
@@ -142,6 +148,7 @@ object Queen extends Logging {
       Props(classOf[Queen]),
       name = Constants.QUEEN_NAME)
     actorSystem.awaitTermination()
+
   }
 
   def main(args: Array[String]) {

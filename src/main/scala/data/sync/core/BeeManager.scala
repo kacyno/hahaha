@@ -10,7 +10,7 @@ import akka.actor.{Address, ActorRef}
 /**
  * Created by hesiyuan on 15/6/23.
  */
-case class BeeDesc(@BeanProperty var runningWorker:Int,@BeanProperty var tatolWorker:Int,@BeanProperty beeId:String,sender:ActorRef  )
+case class BeeDesc(@BeanProperty var runningWorker:Int,@BeanProperty var totalWorker:Int,@BeanProperty beeId:String,sender:ActorRef  )
 object BeeManager {
   var connDic = new ConcurrentHashMap[String,BeeDesc]()
   var addressDic = new ConcurrentHashMap[Address,String]
@@ -24,7 +24,10 @@ object BeeManager {
     connDic-=id
   }
   def getBeeByAddress(address:Address):BeeDesc={
-    return connDic(addressDic(address))
+    if(addressDic.contains(address))
+      if(connDic.contains(addressDic.get(address)))
+        return connDic.get(addressDic.get(address))
+    return null
   }
   //提供给web展现
   def getAllBeeInfo()={
@@ -36,12 +39,12 @@ object BeeManager {
       None
     else {
       val (beeId, desc) = connDic.reduce((b1, b2) => {
-        if ((b1._2.runningWorker.asInstanceOf[Float] / b1._2.tatolWorker) < (b2._2.runningWorker.asInstanceOf[Float] / b2._2.tatolWorker))
+        if ((b1._2.runningWorker.asInstanceOf[Float] / b1._2.totalWorker) < (b2._2.runningWorker.asInstanceOf[Float] / b2._2.totalWorker))
           b1
         else
           b2
       })
-      if (desc.tatolWorker > desc.runningWorker)
+      if (desc.totalWorker > desc.runningWorker)
         Some(beeId)
       else
         None

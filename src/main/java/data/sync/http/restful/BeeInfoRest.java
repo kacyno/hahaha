@@ -21,12 +21,28 @@ import java.util.Set;
  */
 @Path("/bee")
 public class BeeInfoRest {
+    /*
+    [
+{
+beeId: "bee@0.0.0.0:43934",
+runningWorker: 0,
+totalWorker: 10
+},
+{
+beeId: "bee@0.0.0.0:43936",
+runningWorker: 0,
+totalWorker: 10
+}
+]
+     */
     @GET
     @Path("/allbees")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     public String getBees(){
         return BeeManager.getAllBeesJson();
     }
+
+
     @GET
     @Path("/beeinfo")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")

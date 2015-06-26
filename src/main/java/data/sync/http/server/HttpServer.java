@@ -90,7 +90,7 @@ public class HttpServer {
         //添加rest
         ServletHolder holder = new ServletHolder(ServletContainer.class);
         holder.setInitParameter("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.PackagesResourceConfig");
-        holder.setInitParameter("com.sun.jersey.config.property.packages", "http.restful");
+        holder.setInitParameter("com.sun.jersey.config.property.packages", "data.sync.http.restful");
         webAppContext.addServlet(holder, "/rest/*");
 
     }
