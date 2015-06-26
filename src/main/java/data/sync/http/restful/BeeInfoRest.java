@@ -42,7 +42,28 @@ totalWorker: 10
         return BeeManager.getAllBeesJson();
     }
 
-
+/*
+[
+{
+taskId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_1",
+readNum: "5655",
+jobId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77",
+status: "RUNNING",
+beeId: "bee@0.0.0.0:43934",
+writeNum: "5655",
+attemptId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_1-attempt-1"
+},
+{
+taskId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_3",
+readNum: "6923",
+jobId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77",
+status: "RUNNING",
+beeId: "bee@0.0.0.0:43934",
+writeNum: "6924",
+attemptId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_3-attempt-1"
+}
+]
+ */
     @GET
     @Path("/beeinfo")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
