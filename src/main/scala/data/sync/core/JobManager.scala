@@ -26,7 +26,15 @@ case class JobInfo(@BeanProperty jobId: String,
                    @BeanProperty runningTasks: java.util.Set[TaskInfo],
                    @BeanProperty finishedTasks: java.util.Set[TaskInfo],
                    @BeanProperty var status: JobStatus = JobStatus.SUBMITED
-                    )
+                    ){
+  override def equals(obj: scala.Any): Boolean = {
+    if(obj==null) return false
+    if(!obj.isInstanceOf[JobInfo]) return false
+    this.jobId.equals(obj.asInstanceOf[JobInfo].jobId)
+  }
+
+  override def hashCode(): Int = super.hashCode()
+}
 
 object JobManager {
   val fs = FileSystem.get(new Configuration())
@@ -76,7 +84,7 @@ object JobManager {
   def addAttempt(job: JobInfo, task: TaskInfo): TaskAttemptInfo = {
     var attempts = JobManager.getAttempts(task.taskId)
     val attemptPostfix = attempts.length + 1
-    val newAttempt = new TaskAttemptInfo(task, task.taskId + "-attempt-" + attemptPostfix)
+    val newAttempt = TaskAttemptInfo(task, task.taskId + "-attempt-" + attemptPostfix)
     val attemptsBuffer = ArrayBuffer() ++ attempts
     attemptsBuffer += newAttempt
     attempts = attemptsBuffer.toArray
@@ -97,9 +105,11 @@ object JobManager {
    * 将bee不再执行一个attempt时调用此方法
    */
   def removeBeeAttempt(beeId: String, attemptId: String): Unit = {
-    attempt2bee -= attemptId
-    var s = bee2attempt.getOrElse(beeId, new util.HashSet[String]())
-    s -= attemptId
+    if(attempt2bee.contains(attemptId)) {
+      attempt2bee -= attemptId
+      var s = bee2attempt.getOrElse(beeId, new util.HashSet[String]())
+      s -= attemptId
+    }
   }
 
   def getAttempts(taskId: String): Array[TaskAttemptInfo] = {
@@ -134,7 +144,7 @@ object JobManager {
     val now = new Date().getTime
     for (attemptId <- attempt2bee.keys()) {
       //两分钟没有汇报状态的将重新生成一个attempt并行执行,并不会杀死原attempt
-      if (now - attempt2report(attemptId).time > 2 * 60 * 1000 && attempt2report(attemptId).status != TaskAttemptStatus.FAILED && attempt2report(attemptId).status != TaskAttemptStatus.FINSHED) {
+      if (now - attempt2report(attemptId).time > 10 * 60 * 1000 && attempt2report(attemptId).status != TaskAttemptStatus.FAILED && attempt2report(attemptId).status != TaskAttemptStatus.FINSHED) {
         val task = taskAttemptDic(attemptId).taskDesc
         val job = jobDic(task.jobId)
         job.runningTasks -= task
@@ -173,7 +183,7 @@ object JobManager {
         finishedAttempt(report.attemptId, TaskAttemptStatus.FINSHED)
 
         task.status = TaskStatus.FINSHED
-        job.runningTasks -= task
+        job.runningTasks.remove(task)
         job.finishedTasks += task
 
         //job运行成功

@@ -1,10 +1,9 @@
 package data.sync.core;
 
+import data.sync.common.ClusterMessages;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -13,14 +12,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        Map<Integer,Integer> map = new ConcurrentHashMap<Integer, Integer>();
-        map = Collections.synchronizedMap(map);
-        map.put(1,1);
-        map.get(null);
-//        map.put(2,2);
-//        for(Integer k : map.keySet()){
-//            map.remove(1);
-//            System.out.println(map);
-//        }
+        Set<ClusterMessages.TaskInfo> set = new HashSet<ClusterMessages.TaskInfo>();
+        ClusterMessages.TaskInfo b = new ClusterMessages.TaskInfo("","","","","","","","","","",TaskStatus.FAILED);
+        System.out.println(b.hashCode());
+        ClusterMessages.TaskInfo a = new ClusterMessages.TaskInfo("","","","","","","","","","",TaskStatus.FAILED);
+        System.out.println(b.hashCode());
+        System.out.println((a.equals(b)));
+        set.add(a);
+        set.add(b);
+        System.out.println(set.size());
+        set.remove(a);
+        System.out.println(set.size());
     }
 }

@@ -112,7 +112,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
   def assignTask(): Unit = {
     val assigns = FIFOScheduler.assigns
     for ((beeId, tad) <- assigns) {
-      BeeManager.getBee(beeId).sender ! tad
+      BeeManager.getBee(beeId).sender ! StartTask(tad)
     }
   }
 

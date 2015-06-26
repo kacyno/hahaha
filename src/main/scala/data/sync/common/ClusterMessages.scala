@@ -29,12 +29,28 @@ object ClusterMessages {
                       @BeanProperty table: String,
                       @BeanProperty targetDir: String,
                       @BeanProperty var status: TaskStatus = TaskStatus.STARTED
-                       ) extends Serializable
+                       ) extends Serializable{
+    override def equals(obj: scala.Any): Boolean = {
+      if(obj==null) return false
+      if(!obj.isInstanceOf[TaskInfo]) return false
+      this.taskId.equals(obj.asInstanceOf[TaskInfo].taskId)
+    }
+
+    override def hashCode(): Int = taskId.hashCode()
+  }
 
   case class TaskAttemptInfo(taskDesc: TaskInfo,
                              attemptId: String,
                              var status: TaskAttemptStatus = TaskAttemptStatus.STARTED
-                              ) extends ClusterMessage
+                              ) extends ClusterMessage{
+    override def hashCode(): Int = super.hashCode()
+
+    override def equals(obj: scala.Any): Boolean = {
+      if(obj==null) return false
+      if(!obj.isInstanceOf[TaskAttemptInfo]) return false
+      this.attemptId.equals(obj.asInstanceOf[TaskAttemptInfo].attemptId)
+    }
+  }
 
   case class StartTask(tad: TaskAttemptInfo) extends ClusterMessage
 

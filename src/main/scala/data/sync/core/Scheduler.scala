@@ -30,7 +30,7 @@ object FIFOScheduler {
       else {
         val (jobId, _, _) = iter.next()
         val job = JobManager.getJob(jobId)
-        val tmp = job.appendTasks.clone()
+        val tmp = job.appendTasks.map(a=>a)
         for (task <- tmp) {
           BeeManager.getMostFreeBee() match {
             case Some(beeId) =>

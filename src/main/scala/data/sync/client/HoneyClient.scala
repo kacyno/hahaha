@@ -1,10 +1,14 @@
 package data.sync.client
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import data.sync.common.ClientMessages.SubmitJob
-import data.sync.common.{Constants, Configuration}
+import data.sync.common.ClientMessages.{SubmitResult, DBInfo, SubmitJob}
+import data.sync.common.{AkkaUtils, Constants, Configuration}
 import scala.collection.JavaConversions._
+import scala.concurrent.duration.{Duration, FiniteDuration}
+
 /**
  * Created by hesiyuan on 15/6/19.
  */
@@ -37,7 +41,8 @@ object HoneyClient {
   val greeter = system.actorSelection(queenUrl)
   println(greeter)
   def main (args: Array[String]) {
-    greeter ! SubmitJob(1,Array(),2,"test")
-    Thread.sleep(100000)
+    val message = SubmitJob(1,Array(DBInfo("select * from %s where 0=0", "id", Array[String]("import_cps_confirm_1"), "test", "localhost", "3306", "root", "lkmlnfqp")),5,"/Users/hesiyuan/honey-data/")
+    greeter ! message
+    Thread.sleep(100000000l)
   }
 }
