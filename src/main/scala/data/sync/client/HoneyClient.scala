@@ -42,7 +42,7 @@ object HoneyClient {
   println(queenUrl)
   val greeter = system.actorSelection(queenUrl)
   def main (args: Array[String]) {
-    val message = SubmitJob(1,Array(DBInfo("select * from %s where 0=0", "id", Array[String]("import_cps_confirm_1"), "test", "localhost", "3306", "root", "lkmlnfqp")),5,"/Users/hesiyuan/honey-data/")
+    val message = SubmitJob(1,Array(DBInfo("select * from %s ", "id", Array[String]("import_cps_confirm_1"), "test", "localhost", "3306", "root", "lkmlnfqp")),5,"/Users/hesiyuan/honey-data/")
     val actorRef = Await.result(greeter.resolveOne()(Duration.create(5,"seconds")), Duration.create(5,"seconds"))
     println(AkkaUtils.askWithReply[SubmitResult](message,actorRef,Duration.create(5,"seconds")))
   }

@@ -74,11 +74,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
     for (report <- reports) {
       JobManager.processReport(beeId, report, this)
       if (report.status != TaskAttemptStatus.RUNNING) {
-        //任务结束了
-        val bee = BeeManager.getBee(beeId)
         isWorkerChange = true;
-        bee.runningWorker -= 1
-        BeeManager.updateBee(bee) //更新bee的资源信息
       }
     }
     if (isWorkerChange)

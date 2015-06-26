@@ -156,6 +156,11 @@ public class Worker {
                 error = e.getMessage();
                 bee.failTask(Worker.this);
                 logger.info("fecher:"+attempt.toString(),e);
+            }finally{
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                }
             }
 
         }
