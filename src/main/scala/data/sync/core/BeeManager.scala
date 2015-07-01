@@ -1,6 +1,7 @@
 package data.sync.core
 
 import java.util.concurrent.ConcurrentHashMap
+import data.sync.common.ClusterMessages.BeeDesc
 import net.sf.json.{JSONArray, JSONObject}
 
 import scala.beans.BeanProperty
@@ -10,7 +11,7 @@ import akka.actor.{Address, ActorRef}
 /**
  * Created by hesiyuan on 15/6/23.
  */
-case class BeeDesc(@BeanProperty var runningWorker:Int,@BeanProperty var totalWorker:Int,@BeanProperty beeId:String,sender:ActorRef  )
+
 object BeeManager {
   var connDic = new ConcurrentHashMap[String,BeeDesc]()
   var addressDic = new ConcurrentHashMap[Address,String]
@@ -24,8 +25,8 @@ object BeeManager {
     connDic-=id
   }
   def getBeeByAddress(address:Address):BeeDesc={
-    if(addressDic.contains(address))
-      if(connDic.contains(addressDic.get(address)))
+    if(addressDic.containsKey(address))
+      if(connDic.containsKey(addressDic.get(address)))
         return connDic.get(addressDic.get(address))
     return null
   }

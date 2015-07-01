@@ -66,7 +66,7 @@ class Bee(conf:Configuration) extends Logging {
    */
   private def startTask(tad: TaskAttemptInfo) = synchronized {
     logInfo("Get Task:"+tad)
-    val worker = new Worker(tad, this)
+    val worker = new Worker(conf,tad, this)
     worker.getAttempt.status = TaskAttemptStatus.RUNNING
     executorPool.execute(worker.getFetcher)
     executorPool.execute(worker.getSinker)
@@ -87,7 +87,7 @@ class Bee(conf:Configuration) extends Logging {
     finishTask(worker)
   }
   def successTask(worker:Worker): Unit ={
-    worker.getAttempt.status = TaskAttemptStatus.FINSHED
+    worker.getAttempt.status = TaskAttemptStatus.FINISHED
     finishTask(worker)
   }
   /*

@@ -2,6 +2,7 @@ package data.sync.http.restful;
 
 import static data.sync.common.ClusterMessages.*;
 import data.sync.core.BeeManager;
+import data.sync.core.JobHistory;
 import data.sync.core.JobManager;
 import net.sf.json.JSONArray;
 import scala.Tuple2;
@@ -11,10 +12,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by hesiyuan on 15/6/26.
@@ -78,7 +76,10 @@ attemptId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_3-attempt-1"
             map.put("jobId",tuple2._1().taskDesc().jobId());
             map.put("readNum",String.valueOf(tuple2._2().readNum()));
             map.put("writeNum",String.valueOf(tuple2._2().writeNum()));
+            map.put("startTime", JobHistory.format.format(new Date(tuple2._1().startTime())));
+            map.put("endTime", JobHistory.format.format(new Date(tuple2._1().finishTime())));
             map.put("status",tuple2._1().status().toString());
+
             info.add(map);
         }
 

@@ -30,7 +30,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
     case x: DisassociatedEvent =>
       removeBee(x)
       logWarning(s"Received irrelevant DisassociatedEvent $x")
-    case other=>
+    case other =>
       logInfo(other.toString)
   }
 
@@ -40,11 +40,13 @@ class Queen extends Actor with ActorLogReceive with Logging {
    *  将运行在该Bee上的taskAttempt全部移走
    */
   def removeBee(x: DisassociatedEvent): Unit = {
-    val bee = BeeManager.getBeeByAddress(x.remoteAddress)
-    if (bee != null) {
-      BeeManager.removeBee(bee.beeId)
-      JobManager.removeAttemptByBee(bee.beeId, this)
-      assignTask()
+    if (x.remoteAddress.toString.indexOf("bee") != -1) {
+      val bee = BeeManager.getBeeByAddress(x.remoteAddress)
+      if (bee != null) {
+        BeeManager.removeBee(bee.beeId)
+        JobManager.removeAttemptByBee(bee.beeId, this)
+        assignTask()
+      }
     }
   }
 
@@ -90,6 +92,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
     val job = JobInfo(jobId,
       priority,
       new Date().getTime,
+      0l,
       dir,
       dbinfos,
       tasks,
@@ -111,8 +114,13 @@ class Queen extends Actor with ActorLogReceive with Logging {
   def assignTask(): Unit = {
     val assigns = FIFOScheduler.assigns
     for ((beeId, tad) <- assigns) {
-      logInfo("send task: "+tad +" to bee:"+beeId)
+      logInfo("send task: " + tad + " to bee:" + beeId)
       BeeManager.getBee(beeId).sender ! StartTask(tad)
+      //当任发送给Bee后即认为任务开始
+      if(tad.taskDesc.startTime == 0)
+        tad.taskDesc.startTime = new Date().getTime
+      //attempt开始时间
+      tad.startTime = new Date().getTime;
     }
   }
 
@@ -128,8 +136,8 @@ class Queen extends Actor with ActorLogReceive with Logging {
           try {
             if (JobManager.checkTimeOut())
               assignTask()
-          }catch{
-            case e : Throwable=>logInfo("checker error",e)
+          } catch {
+            case e: Throwable => logInfo("checker error", e)
           }
         }
       }

@@ -1,7 +1,7 @@
 package data.sync.core
 
 import java.util.{UUID, Comparator, PriorityQueue}
-import data.sync.common.ClusterMessages.TaskAttemptInfo
+import data.sync.common.ClusterMessages.{JobInfo, TaskAttemptInfo}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 /**
@@ -33,9 +33,9 @@ object FIFOScheduler {
         val tmp = job.appendTasks.map(a=>a)
         for (task <- tmp) {
           BeeManager.getMostFreeBee() match {
-            case Some(beeId) =>
+            case Some(beeId) if(beeId!=task.lastErrorBee) =>
               job.status=JobStatus.RUNNING
-              val newAttempt = JobManager.addAttempt(job,task)
+              val newAttempt = JobManager.generateAttempt(job,task)
               JobManager.mapBeeAttempt(beeId,newAttempt)
               buffer += ((beeId, newAttempt))
               BeeManager.busyBee(beeId)

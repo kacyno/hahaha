@@ -2,6 +2,7 @@ package data.sync.core;
 
 import data.sync.common.Configuration;
 import data.sync.common.Constants;
+import org.apache.commons.lang.ArrayUtils;
 
 import static data.sync.common.ClusterMessages.*;
 
@@ -28,6 +29,8 @@ public class JobHistory {
      */
     public static HJob getMemHjob(String jobId) {
         JobInfo jobInfo = JobManager.getJob(jobId);
+        if(jobInfo==null)
+            return null;
         Set<TaskInfo> tasks = new HashSet<TaskInfo>();
         tasks.addAll(jobInfo.appendTasks());
         tasks.addAll(jobInfo.finishedTasks());
@@ -39,7 +42,7 @@ public class JobHistory {
             if(attempt.length>0) {
                 for (int i = 0; i < attempt.length; i++) {
                     BeeAttemptReport report = JobManager.getReport(attempt[i].attemptId());
-                    attempts.add(new HAttempt(attempt[i].attemptId(),report.readNum(),report.writeNum(),format.format(new Date(report.time())),report.error(),report.status()));
+                    attempts.add(new HAttempt(attempt[i].attemptId(),report.readNum(),report.writeNum(),format.format(new Date(attempt[i].startTime())),format.format(new Date(attempt[i].finishTime())),report.error(),attempt[i].status()));
                 }
             }
             HTask htask = HTask.generateFormTaskInfo(task);
@@ -80,6 +83,7 @@ public class JobHistory {
         private String jobId;
         private int priority;
         private String submitTime;
+        private String finishTime;
         private String targetDir;
         private String jobDesc;
         private Set<HTask> tasks;
@@ -90,12 +94,19 @@ public class JobHistory {
             job.jobId = ji.jobId();
             job.priority = ji.priority();
             job.submitTime = format.format(new Date(ji.submitTime()));
+            job.finishTime = format.format(new Date(ji.finishTime()));
             job.targetDir = ji.targetDir();
-            job.jobDesc = "";
+            job.jobDesc = ArrayUtils.toString(ji.info());
             job.status = ji.status();
             return job;
         }
+        public String getFinishTime() {
+            return finishTime;
+        }
 
+        public void setFinishTime(String finishTime) {
+            this.finishTime = finishTime;
+        }
         public String getJobId() {
             return jobId;
         }
@@ -163,6 +174,8 @@ public class JobHistory {
         private String db;
         private String table;
         private String targetDir;
+        private String startTime;
+        private String finishTime;
         private Set<HAttempt> attempts;
         private TaskStatus status;
 
@@ -178,7 +191,25 @@ public class JobHistory {
             task.table = ti.table();
             task.targetDir = ti.targetDir();
             task.status = ti.status();
+            task.startTime = format.format(new Date(ti.startTime()));
+            task.finishTime = format.format(new Date(ti.finishTime()));
             return task;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public void setStartTime(String startTime) {
+            this.startTime = startTime;
+        }
+
+        public String getFinishTime() {
+            return finishTime;
+        }
+
+        public void setFinishTime(String finishTime) {
+            this.finishTime = finishTime;
         }
 
         public String getTaskId() {
@@ -272,18 +303,28 @@ public class JobHistory {
 
     public static class HAttempt implements Serializable {
         private String attemptId;
+        private String startTime;
         private String finishTime;
         private String error;
         private TaskAttemptStatus status;
         private long readNum;
         private long writeNum;
-        public HAttempt(String attemptId,long readNum, long writeNum, String finishTime, String error, TaskAttemptStatus status) {
+        public HAttempt(String attemptId,long readNum, long writeNum,String startTime, String finishTime, String error, TaskAttemptStatus status) {
             this.attemptId = attemptId;
             this.readNum = readNum;
             this.writeNum = writeNum;
+            this.startTime = startTime;
             this.finishTime = finishTime;
             this.error = error;
             this.status = status;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public void setStartTime(String startTime) {
+            this.startTime = startTime;
         }
 
         public long getReadNum() {

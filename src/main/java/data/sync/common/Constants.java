@@ -33,7 +33,13 @@ public interface Constants {
 
     int QUEEN_CHECKER_INTERVAL= 10*1000;
     int BEE_HEATBEATER_INTERVAL = 2*1000;
+    int TASK_TIMEOUT = 1*60*1000;
 
     String HISTORY_DIR = "history.dir";
     String HISTORY_DIR_DEFAULT = "./";
+
+    String FETCHER_CLASSNAME = "fetcher.classname";
+
+    String SINKER_CLASSNAME = "sinker.classname";
+
 }

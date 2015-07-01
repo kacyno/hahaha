@@ -1438,7 +1438,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>{
         return ret;
     }
     @SuppressWarnings("unchecked")
-    public <U> U getInstance(String name){
+    public <U,T extends U> U getInstance(String name, T t){
+        if(org.apache.commons.lang.StringUtils.isEmpty(get(name)))
+            return t;
         Class<?>[] classes = getClasses(name);
         if(classes.length==0)
             return null;

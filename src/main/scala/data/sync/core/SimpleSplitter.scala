@@ -20,7 +20,7 @@ object SimpleSplitter extends Splitter {
       //表比期望任务数还多，则以表的个数做为任务数
       for (db <- dbinfos) {
         for (table <- db.tables)
-          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
+          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
         i += 1
       }
     } else {
@@ -65,9 +65,9 @@ object SimpleSplitter extends Splitter {
             }else
               cond = " and " + cond
             if (j == p)
-              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2+1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
+              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2+1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
             else
-              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/")
+              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
             i += 1
           }
         }

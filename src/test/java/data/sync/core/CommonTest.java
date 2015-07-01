@@ -13,9 +13,9 @@ public class CommonTest {
     @Test
     public void test1(){
         Set<ClusterMessages.TaskInfo> set = new HashSet<ClusterMessages.TaskInfo>();
-        ClusterMessages.TaskInfo b = new ClusterMessages.TaskInfo("","","","","","","","","","",TaskStatus.FAILED);
+        ClusterMessages.TaskInfo b = new ClusterMessages.TaskInfo("","","","","","","","","","",0l,0l,TaskStatus.FAILED,"");
         System.out.println(b.hashCode());
-        ClusterMessages.TaskInfo a = new ClusterMessages.TaskInfo("","","","","","","","","","",TaskStatus.FAILED);
+        ClusterMessages.TaskInfo a = new ClusterMessages.TaskInfo("","","","","","","","","","",0l,0l,TaskStatus.FAILED,"");
         System.out.println(b.hashCode());
         System.out.println((a.equals(b)));
         set.add(a);

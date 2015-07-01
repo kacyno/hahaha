@@ -14,14 +14,14 @@ import java.util.Set;
 public class BeeManagerTest {
     @Test
     public void test1(){
-        ClusterMessages.TaskInfo t1 = new ClusterMessages.TaskInfo("t1","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t2 = new ClusterMessages.TaskInfo("t2","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t3 = new ClusterMessages.TaskInfo("t3","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t4 = new ClusterMessages.TaskInfo("t4","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t5 = new ClusterMessages.TaskInfo("t5","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t6 = new ClusterMessages.TaskInfo("t6","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t7 = new ClusterMessages.TaskInfo("t7","test-job1","","","","","","","","",TaskStatus.STARTED);
-        ClusterMessages.TaskInfo t8 = new ClusterMessages.TaskInfo("t8","test-job1","","","","","","","","",TaskStatus.STARTED);
+        ClusterMessages.TaskInfo t1 = new ClusterMessages.TaskInfo("t1","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t2 = new ClusterMessages.TaskInfo("t2","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t3 = new ClusterMessages.TaskInfo("t3","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t4 = new ClusterMessages.TaskInfo("t4","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t5 = new ClusterMessages.TaskInfo("t5","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t6 = new ClusterMessages.TaskInfo("t6","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t7 = new ClusterMessages.TaskInfo("t7","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
+        ClusterMessages.TaskInfo t8 = new ClusterMessages.TaskInfo("t8","test-job1","","","","","","","","",0l,0l,TaskStatus.STARTED,"");
         Set<ClusterMessages.TaskInfo> tasks = new HashSet<ClusterMessages.TaskInfo>();
         tasks.add(t1);
         tasks.add(t2);
@@ -34,9 +34,10 @@ public class BeeManagerTest {
 
 
 
-        JobInfo job1 = new JobInfo("test-job1",
+        ClusterMessages.JobInfo job1 = new ClusterMessages.JobInfo("test-job1",
                 1,
                 new Date().getTime(),
+                0l,
                 "",
                 null,
                 tasks,
@@ -45,9 +46,10 @@ public class BeeManagerTest {
                 JobStatus.SUBMITED
         );
 
-        JobInfo job2 = new JobInfo("test-job2",
+        ClusterMessages.JobInfo job2 = new ClusterMessages.JobInfo("test-job2",
                 1,
                 new Date().getTime()-10000,
+                0l,
                 "",
                 null,
                 new HashSet<ClusterMessages.TaskInfo>(),
@@ -65,9 +67,9 @@ public class BeeManagerTest {
 //            System.out.println(t._1());
 //        }
 
-        BeeManager.connDic().put("bee1",new BeeDesc(5,10,"bee1",null));
-        BeeManager.connDic().put("bee2",new BeeDesc(4,10,"bee2",null));
-        BeeManager.connDic().put("bee3", new BeeDesc(8, 10, "bee3", null));
+        BeeManager.connDic().put("bee1",new ClusterMessages.BeeDesc(5,10,"bee1",null));
+        BeeManager.connDic().put("bee2",new ClusterMessages.BeeDesc(4,10,"bee2",null));
+        BeeManager.connDic().put("bee3", new ClusterMessages.BeeDesc(8, 10, "bee3", null));
 //        System.out.println(BeeManager.getMostFreeBee());
 
         Object[] assigns = FIFOScheduler.assigns();

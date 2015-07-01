@@ -11,10 +11,6 @@ public class SyncStorage extends Storage{
     List<Line> list = new ArrayList<Line>();
     int index = 0;
     int size = 0;
-    @Override
-    public String info() {
-        return null;
-    }
 
     @Override
     public void setPushClosed(boolean close) {
@@ -34,10 +30,6 @@ public class SyncStorage extends Storage{
         return false;
     }
 
-    @Override
-    public boolean fakePush(int lineLength) {
-        return false;
-    }
 
     @Override
     public Line pull() {
