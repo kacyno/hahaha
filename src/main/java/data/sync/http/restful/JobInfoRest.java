@@ -1,12 +1,16 @@
 package data.sync.http.restful;
 
+import data.sync.core.JobHistory;
 import data.sync.core.JobManager;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import java.util.*;
 
 /**
  * Created by hesiyuan on 15/6/26.
@@ -100,8 +104,29 @@ targetDir: "/Users/hesiyuan/honey-data/"
     @Path("/alljobs")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     public String getJobs(){
-        return JobManager.getAllJobJson();
+        return JSONArray.fromObject(JobManager.allJobs().values()).toString();
     }
+
+
+    @GET
+    @Path("/hisjobs")
+    @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
+    public String getHisJobs(){
+        List<JobHistory.HJob> jobs = JobHistory.getHistoryJob();
+        List<Map<String,String>> list = new ArrayList<Map<String,String>>();
+        for(JobHistory.HJob job:jobs){
+            Map<String,String> map = new HashMap<String,String>();
+            map.put("jobId",job.getJobId());
+            map.put("jobDesc",job.getJobDesc());
+            map.put("startTime",job.getSubmitTime());
+            map.put("finishedTime",job.getFinishTime());
+            map.put("status",job.getStatus().toString());
+            list.add(map);
+        }
+        Collections.reverse(list);
+        return JSONArray.fromObject(list).toString();
+    }
+
 
     /*
     {
@@ -229,6 +254,6 @@ user: "root"
     @Path("/jobinfo")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     public String getJob(@QueryParam("jobid")String jobId){
-        return JobManager.getJobJson(jobId);
+        return JSONObject.fromObject(JobHistory.getMemHjob(jobId)).toString();
     }
 }

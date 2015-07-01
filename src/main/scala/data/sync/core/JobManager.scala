@@ -59,7 +59,7 @@ object JobManager {
     s += attempt.attemptId
     bee2attempt(beeId) = s
     taskAttemptDic(attempt.attemptId) = attempt
-    initAttemptReport(attempt.attemptId)
+    initAttemptReport(beeId,attempt.attemptId)
   }
   /*
    * 生成一个attempt
@@ -83,8 +83,8 @@ object JobManager {
   /*
    * 初始一条假的汇报，用于超时判断
    */
-  def initAttemptReport(attemptId: String): Unit = {
-    attempt2report(attemptId) = BeeAttemptReport(attemptId, 0, 0, new Date().getTime, "", TaskAttemptStatus.STARTED)
+  def initAttemptReport(beeId:String,attemptId: String): Unit = {
+    attempt2report(attemptId) = BeeAttemptReport(beeId,attemptId, 0, 0, new Date().getTime, "", TaskAttemptStatus.STARTED)
   }
 
   /*
@@ -248,7 +248,7 @@ object JobManager {
    */
   def clearJob(jobId: String): Unit = {
     //将历史保存
-    JobHistory.dumpMemJob(jobId)
+    JobHistory.addJobToHistory(jobId)
     //清理数据
     val job = jobDic(jobId)
 
@@ -265,12 +265,8 @@ object JobManager {
     jobDic -= jobId
   }
 
-  def getAllJobJson(): String = {
-    JSONArray.fromObject(jobDic.values()).toString()
-  }
-  def getJobJson(jobId:String):String={
-    JSONObject.fromObject(JobHistory.getMemHjob(jobId)).toString()
-  }
+
+
   def getAttemptsByBee(beeId:String):util.Set[(TaskAttemptInfo,BeeAttemptReport)]={
     val attemptIds = bee2attempt.getOrElse(beeId,new util.HashSet[String]())
     attemptIds.map(id=>{
@@ -305,5 +301,8 @@ object JobManager {
 
   def addJob(job: JobInfo): Unit = {
     jobDic(job.jobId) = job
+  }
+  def allJobs():java.util.Map[String,JobInfo]={
+    jobDic
   }
 }

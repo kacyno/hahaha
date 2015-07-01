@@ -37,7 +37,7 @@ totalWorker: 10
     @Path("/allbees")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     public String getBees(){
-        return BeeManager.getAllBeesJson();
+        return JSONArray.fromObject(BeeManager.allBeesInfo().values()).toString();
     }
 
 /*

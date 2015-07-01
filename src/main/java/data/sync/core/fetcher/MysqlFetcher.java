@@ -8,7 +8,6 @@ import data.sync.core.storage.Line;
 import data.sync.core.storage.Storage;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -55,7 +54,9 @@ public class MysqlFetcher implements Fetcher{
                 for(int i=1;i<=size;i++)
                     l.addField(rs.getString(i));
                 storage.push(l);
+                stat.incReadNum(1);
             }
+
             while(rs.next()&&!stop){
                 Line l = storage.createLine();
                 for(int i=1;i<=size;i++)

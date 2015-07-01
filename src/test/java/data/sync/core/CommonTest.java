@@ -12,16 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        Set<ClusterMessages.TaskInfo> set = new HashSet<ClusterMessages.TaskInfo>();
-        ClusterMessages.TaskInfo b = new ClusterMessages.TaskInfo("","","","","","","","","","",0l,0l,TaskStatus.FAILED,"");
-        System.out.println(b.hashCode());
-        ClusterMessages.TaskInfo a = new ClusterMessages.TaskInfo("","","","","","","","","","",0l,0l,TaskStatus.FAILED,"");
-        System.out.println(b.hashCode());
-        System.out.println((a.equals(b)));
-        set.add(a);
-        set.add(b);
-        System.out.println(set.size());
-        set.remove(a);
-        System.out.println(set.size());
+        Map<String,String> map = Collections.synchronizedMap(new LinkedHashMap<String,String>(1000, 0.15f, true));
+        map.put("1","1");
+        map.put("2","2");
+        map.get("1");
+        System.out.println(map);
     }
 }

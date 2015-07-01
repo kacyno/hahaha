@@ -96,7 +96,7 @@ class Bee(conf:Configuration) extends Logging {
   def updateStatus() = {
     var buffer = ArrayBuffer[BeeAttemptReport]()
     for(worker<-workerSet){
-      buffer+= BeeAttemptReport(worker.getAttempt.attemptId,
+      buffer+= BeeAttemptReport(beeId,worker.getAttempt.attemptId,
         worker.getReadCount,
         worker.getWriteCount,
         new Date().getTime,

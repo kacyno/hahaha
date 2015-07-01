@@ -1,0 +1,19 @@
+{
+  "dbinfos": [
+    {
+      "db": "test",
+      "indexFiled": "id",
+      "ip": "localhost",
+      "port": "3306",
+      "pwd": "lkmlnfqp",
+      "sql": "select * from %s ",
+      "tables": ["import_cps_confirm_1"],
+      "user": "root"
+    }
+  ],
+  "priority": 1,
+  "targetDir": "/Users/hesiyuan/honey-data/",
+  "taskNum": 4
+}
+
+

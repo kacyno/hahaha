@@ -31,7 +31,7 @@ object BeeManager {
     return null
   }
   //提供给web展现
-  def getAllBeeInfo()={
+  def allBeesInfo()={
     connDic
   }
   //找出最闲的Bee
@@ -57,7 +57,5 @@ object BeeManager {
   def busyBee(beeId:String): Unit =synchronized{
     connDic(beeId).runningWorker+=1
   }
-  def getAllBeesJson():String={
-    JSONArray.fromObject(connDic.values()).toString()
-  }
+
 }

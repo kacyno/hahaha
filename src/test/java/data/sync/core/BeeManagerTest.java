@@ -77,9 +77,6 @@ public class BeeManagerTest {
             System.out.println(assigns[i]);
         }
 //        JobManager.printMem();
-        System.out.println(JobManager.getAllJobJson());
-        System.out.println(BeeManager.getAllBeesJson());
-        System.out.println(JobManager.getJobJson("test-job1"));
 
     }
 }

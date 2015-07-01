@@ -7,7 +7,9 @@ import data.sync.common.ClientMessages.{SubmitResult, DBInfo, SubmitJob}
 import data.sync.common._
 import data.sync.common.ClusterMessages._
 import data.sync.common.Logging
+import data.sync.common.alarm.AlarmCenter
 import data.sync.http.server.HttpServer
+import net.sf.json.JSONObject
 
 /**
  * Created by hesiyuan on 15/6/19.
@@ -22,8 +24,13 @@ class Queen extends Actor with ActorLogReceive with Logging {
       val beeId = registerBee(cores, sender)
       sender ! ClusterMessages.RegisteredBee(beeId)
       assignTask()
-    case SubmitJob(priority, dbinfos, taskNum, targetDir) =>
-      logInfo("submit job from " + sender.path.address)
+    case job @ SubmitJob(priority, dbinfos, taskNum, targetDir) =>
+      logInfo(
+        """
+          |Submit job from %s
+          |Job desc:
+          |%s
+        """.stripMargin.format(sender.path.address,JSONObject.fromObject(job).toString()))
       val jobId = submitJob(priority, dbinfos, taskNum, targetDir)
       sender ! SubmitResult(jobId)
     case StatusUpdate(beeId, reports) => updateBees(beeId, reports)
@@ -168,6 +175,8 @@ object Queen extends Logging {
     conf.addResource(Constants.CONFIGFILE_NAME)
     val httpServer = new HttpServer(conf)
     httpServer.start()
+    JobHistory.init()
+    AlarmCenter.start(conf)
     run(conf)
   }
 

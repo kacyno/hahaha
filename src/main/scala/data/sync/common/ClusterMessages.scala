@@ -102,6 +102,7 @@ object ClusterMessages {
 
   //bee上attempt执行信息的汇报
   case class BeeAttemptReport(
+                               beeId:String,
                                attemptId: String,
                                readNum: Long,
                                writeNum: Long,
