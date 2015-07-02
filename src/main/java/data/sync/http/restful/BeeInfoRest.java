@@ -69,21 +69,35 @@ attemptId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_3-attempt-1"
         Set<Tuple2<TaskAttemptInfo,BeeAttemptReport>> set = JobManager.getAttemptsByBee(beeId);
         Set<Map<String,String>> info = new HashSet<Map<String,String>>();
         for(Tuple2<TaskAttemptInfo,BeeAttemptReport> tuple2: set){
-            Map<String,String> map = new HashMap<String,String>();
-            map.put("beeId",beeId);
-            map.put("attemptId",tuple2._1().attemptId());
-            map.put("taskId",tuple2._1().taskDesc().taskId());
-            map.put("jobId",tuple2._1().taskDesc().jobId());
-            map.put("readNum",String.valueOf(tuple2._2().readNum()));
-            map.put("writeNum",String.valueOf(tuple2._2().writeNum()));
-            map.put("startTime", JobHistory.format.format(new Date(tuple2._1().startTime())));
-            map.put("endTime", JobHistory.format.format(new Date(tuple2._1().finishTime())));
-            map.put("status",tuple2._1().status().toString());
-
-            info.add(map);
+            info.add(getBeeAttemptMap(tuple2));
         }
-
         return JSONArray.fromObject(info).toString();
     }
 
+    @GET
+    @Path("/beeinfos")
+    @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
+    public String getBee(){
+        List<Map<String,String>> list = new ArrayList<Map<String, String>>();
+        for(String beeId : BeeManager.allBeesInfo().keySet()) {
+            Set<Tuple2<TaskAttemptInfo, BeeAttemptReport>> set = JobManager.getAttemptsByBee(beeId);
+            for (Tuple2<TaskAttemptInfo, BeeAttemptReport> tuple2 : set) {
+                list.add(getBeeAttemptMap(tuple2));
+            }
+        }
+        return JSONArray.fromObject(list).toString();
+    }
+    private Map<String,String> getBeeAttemptMap(Tuple2<TaskAttemptInfo, BeeAttemptReport> tuple2){
+        Map<String, String> map = new HashMap<String, String>();
+        map.put("beeId", tuple2._2().beeId());
+        map.put("attemptId", tuple2._1().attemptId());
+        map.put("taskId", tuple2._1().taskDesc().taskId());
+        map.put("jobId", tuple2._1().taskDesc().jobId());
+        map.put("readNum", String.valueOf(tuple2._2().readNum()));
+        map.put("writeNum", String.valueOf(tuple2._2().writeNum()));
+        map.put("startTime", JobHistory.format.format(new Date(tuple2._1().startTime())));
+        map.put("endTime", JobHistory.format.format(new Date(tuple2._1().finishTime())));
+        map.put("status", tuple2._1().status().toString());
+        return map;
+    }
 }

@@ -34,7 +34,7 @@ public class BeeManagerTest {
 
 
 
-        ClusterMessages.JobInfo job1 = new ClusterMessages.JobInfo("test-job1",
+        ClusterMessages.JobInfo job1 = new ClusterMessages.JobInfo("test-job1",null,
                 1,
                 new Date().getTime(),
                 0l,
@@ -46,7 +46,7 @@ public class BeeManagerTest {
                 JobStatus.SUBMITED
         );
 
-        ClusterMessages.JobInfo job2 = new ClusterMessages.JobInfo("test-job2",
+        ClusterMessages.JobInfo job2 = new ClusterMessages.JobInfo("test-job2",null,
                 1,
                 new Date().getTime()-10000,
                 0l,

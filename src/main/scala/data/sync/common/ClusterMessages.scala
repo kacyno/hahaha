@@ -77,6 +77,7 @@ object ClusterMessages {
    * Created by hesiyuan on 15/6/23.
    */
   case class JobInfo(@BeanProperty jobId: String,
+                     @BeanProperty dbinfos: Array[DBInfo],
                      @BeanProperty priority: Int,
                      @BeanProperty var submitTime: Long,
                      @BeanProperty var finishTime: Long,

@@ -97,6 +97,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
     val jobId = IDGenerator.generatorJobId();
     val tasks = SimpleSplitter.split(jobId, dbinfos, num, dir)
     val job = JobInfo(jobId,
+      dbinfos,
       priority,
       new Date().getTime,
       0l,

@@ -1,9 +1,11 @@
 package data.sync.http.restful;
 
+import data.sync.common.ClusterMessages;
 import data.sync.core.JobHistory;
 import data.sync.core.JobManager;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.ArrayUtils;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -104,7 +106,21 @@ targetDir: "/Users/hesiyuan/honey-data/"
     @Path("/alljobs")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     public String getJobs(){
-        return JSONArray.fromObject(JobManager.allJobs().values()).toString();
+        List<Map<String,String>> list = new ArrayList<Map<String,String>>();
+        for(ClusterMessages.JobInfo job:JobManager.allJobs().values()){
+            Map<String,String> map = new HashMap<String,String>();
+            map.put("jobId",job.getJobId());
+            map.put("jobDesc", ArrayUtils.toString(job.dbinfos()));
+            map.put("priority",String.valueOf(job.priority()));
+            map.put("appendTasks",String.valueOf(job.appendTasks().size()));
+            map.put("runningTasks",String.valueOf(job.runningTasks().size()));
+            map.put("finishedTasks",String.valueOf(job.finishedTasks().size()));
+            map.put("startTime",JobHistory.format.format(new Date(job.submitTime())));
+            map.put("targetDir",job.getTargetDir());
+            map.put("status",job.getStatus().toString());
+            list.add(map);
+        }
+        return JSONArray.fromObject(list).toString();
     }
 
 
@@ -120,6 +136,8 @@ targetDir: "/Users/hesiyuan/honey-data/"
             map.put("jobDesc",job.getJobDesc());
             map.put("startTime",job.getSubmitTime());
             map.put("finishedTime",job.getFinishTime());
+            map.put("targetDir",job.getTargetDir());
+            map.put("priority",String.valueOf(job.getPriority()));
             map.put("status",job.getStatus().toString());
             list.add(map);
         }

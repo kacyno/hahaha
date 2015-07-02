@@ -276,8 +276,6 @@ object JobManager {
 
 
 
-
-
   def getAttempts(taskId: String): Array[TaskAttemptInfo] = {
     taskDic.getOrElse(taskId, Array[TaskAttemptInfo]())
   }
