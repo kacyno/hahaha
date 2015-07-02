@@ -1,5 +1,6 @@
 package data.sync.core;
 
+import data.sync.common.ClientMessages;
 import data.sync.common.Configuration;
 import data.sync.common.Constants;
 import org.apache.commons.lang.ArrayUtils;
@@ -114,7 +115,12 @@ public class JobHistory {
     }
 
 
-
+    public static String getSimpleJobDesc(JobInfo info){
+        if(info.dbinfos().length>0){
+            return info.dbinfos()[0].sql()+" : "+ArrayUtils.toString(info.dbinfos()[0].tables());
+        }
+        return "";
+    }
 
 
 
@@ -145,7 +151,7 @@ public class JobHistory {
             job.submitTime = format.format(new Date(ji.submitTime()));
             job.finishTime = format.format(new Date(ji.finishTime()));
             job.targetDir = ji.targetDir();
-            job.jobDesc = ArrayUtils.toString(ji.info());
+            job.jobDesc = getSimpleJobDesc(ji);
             job.status = ji.status();
             return job;
         }

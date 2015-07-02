@@ -39,4 +39,9 @@
         <value>10</value>
         <description></description>
     </property>
+    <property>
+        <name>history.dir</name>
+        <value>/Users/hesiyuan/testdir/history/</value>
+        <description></description>
+    </property>
 </configuration>
