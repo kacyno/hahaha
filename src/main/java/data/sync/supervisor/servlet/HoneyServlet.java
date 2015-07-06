@@ -30,7 +30,7 @@ public class HoneyServlet extends HttpServlet {
     public void init() throws ServletException {
         super.init();
         sendTimes = Supervisor.conf.getInt(
-                "supervisor.honey.messsage.send.times", -1);
+                "supervisor.honey.message.send.times", -1);
 
         String[] alarms = Supervisor.conf.getStrings("supervisor.honey.alarms");
         String[] groups = Supervisor.conf.getStrings("supervisor.honey.alarm.targets.groups");
