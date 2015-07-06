@@ -2,13 +2,14 @@ package data.sync.core
 
 import java.util.{UUID, Comparator, PriorityQueue}
 import data.sync.common.ClusterMessages.{JobInfo, TaskAttemptInfo}
+import data.sync.common.Logging
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 /**
  * Created by hesiyuan on 15/6/23.
  * 按优先级和提交时间排序
  */
-object FIFOScheduler {
+object FIFOScheduler extends Logging{
   //待调度的任务（jobId,priority,submitTime）
   var queue = new PriorityQueue[(String, Int, Long)](10000, new Comparator[(String, Int, Long)] {
     override def compare(o1: (String, Int, Long), o2: (String, Int, Long)): Int = {
@@ -32,9 +33,10 @@ object FIFOScheduler {
         val job = JobManager.getJob(jobId)
         val tmp = job.appendTasks.map(a=>a)
         for (task <- tmp) {
-          BeeManager.getMostFreeBee() match {
-            case Some(beeId) if(beeId!=task.lastErrorBee) =>
+          BeeManager.getMostFreeBee(task.lastErrorBee) match {
+            case Some(beeId) =>
               job.status=JobStatus.RUNNING
+              task.lastErrorBee=null
               val newAttempt = JobManager.generateAttempt(job,task)
               JobManager.mapBeeAttempt(beeId,newAttempt)
               buffer += ((beeId, newAttempt))
@@ -50,9 +52,11 @@ object FIFOScheduler {
   def addJob(job: JobInfo) = {
     job.status = JobStatus.STARTED
     queue.add((job.jobId, job.priority, job.submitTime))
+    logInfo("add job "+job.jobId+" to FIFOScheduler")
   }
 
   def delJob(job: JobInfo) = {
     queue.remove((job.jobId, job.priority, job.submitTime))
+    logInfo("remove job "+job.jobId+" from FIFOScheduler")
   }
 }

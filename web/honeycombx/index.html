@@ -87,6 +87,7 @@
                 <th data-field="attemptId" data-sortable="true">AttemptId</th>
                 <th data-field="readNum" data-sortable="true">读取记录数</th>
                 <th data-field="writeNum" data-sortable="true">写入记录数</th>
+                <th data-field="bufferSize" data-sortable="true">缓存大小</th>
                 <th data-field="startTime" data-sortable="true">开始时间</th>
                 <th data-field="status" data-sortable="true">状态</th>
             </tr>
@@ -105,17 +106,23 @@
                data-striped="true"
                data-sort-name="startTime"
                data-sort-order="desc"
+               data-show-columns="true"
                 >
             <thead>
             <tr>
                 <th data-field="jobId" data-formatter="jobFormatter" data-sortable="true">JobId</th>
+                <th data-field="jobName" data-sortable="true">作业名</th>
                 <th data-field="jobDesc" data-sortable="true">描述</th>
-                <th data-field="priority" data-sortable="true">优先级</th>
+                <th data-field="priority" data-visible="false">优先级</th>
                 <th data-field="appendTasks" data-sortable="true">挂起任务</th>
                 <th data-field="runningTasks" data-sortable="true">运行任务</th>
                 <th data-field="finishedTasks" data-sortable="true">结束任务</th>
+                <th data-field="failedTasks" data-sortable="true">失败任务</th>
                 <th data-field="startTime" data-sortable="true">提交时间</th>
-                <th data-field="targetDir" data-sortable="true">输出路径</th>
+                <th data-field="targetDir" data-visible="false">输出路径</th>
+                <th data-field="cmd"  data-visible="false">回调命令</th>
+                <th data-field="url" data-visible="false">通知接口</th>
+                <th data-field="user">用户</th>
                 <th data-field="status" data-sortable="true">状态</th>
             </tr>
             </thead>
@@ -128,7 +135,8 @@
                data-classes="table table-hover table-condensed"
                data-striped="true"
                data-sort-name="startTime"
-               data-sort-order="desc">
+               data-sort-order="desc"
+               data-show-columns="true">
             <thead>
             <tr>
                 <th data-field="jobId" data-formatter="jobFormatter" data-sortable="true">JobId</th>
@@ -137,6 +145,10 @@
                 <th data-field="targetDir" data-sortable="true">输出路径</th>
                 <th data-field="startTime" data-sortable="true">开始时间</th>
                 <th data-field="finishedTime" data-sortable="true">结束时间</th>
+                <th data-field="cmd" data-visible="false">回调命令</th>
+                <th data-field="url" data-visible="false">通知接口</th>
+                <th data-field="user" data-sortable="true">用户</th>
+                <th data-field="jobName" data-sortable="true">作业名</th>
                 <th data-field="status" data-sortable="true">状态</th>
 
             </tr>

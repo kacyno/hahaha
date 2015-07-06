@@ -49,6 +49,7 @@ public class MysqlFetcher implements Fetcher{
             ResultSet rs = DBUtils.query(conn, sql);
             int size = 0;
             if(rs.next()) {
+
                 size = rs.getMetaData().getColumnCount();
                 Line l = storage.createLine();
                 for(int i=1;i<=size;i++)

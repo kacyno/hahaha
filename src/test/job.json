@@ -12,8 +12,11 @@
     }
   ],
   "priority": 1,
+  "callbackCMD": "/Users/hesiyuan/testdir/bin/test.sh aa",
+  "notifyUrl": "http://localhost:8044/supervisor/honey",
+  "jobName" : "JobTest",
   "targetDir": "/Users/hesiyuan/testdir/data/",
-  "taskNum": 30
+  "taskNum": 4
 }
 
 

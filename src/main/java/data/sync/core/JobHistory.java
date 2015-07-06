@@ -3,7 +3,11 @@ package data.sync.core;
 import data.sync.common.ClientMessages;
 import data.sync.common.Configuration;
 import data.sync.common.Constants;
+import data.sync.common.Notifier;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import static data.sync.common.ClusterMessages.*;
 
@@ -16,6 +20,7 @@ import java.util.*;
  */
 public class JobHistory {
     public static final String HISTORY_DIR;
+    private static final Log LOG = LogFactory.getLog(JobHistory.class);
     public static final String POST_FIX = ".hisjob";
     static{
         Configuration conf = new Configuration();
@@ -26,6 +31,9 @@ public class JobHistory {
     private static Map<String,HJob> jobHistorys = new LinkedHashMap<String,HJob>(1000, 0.15f);
     public static synchronized void  addJobToHistory(String jobId) throws IOException {
         HJob job = getMemHjob(jobId);
+        //需要通知的任务向目标地址发送httprequest
+        JobInfo jobInfo = JobManager.getJob(jobId);
+        Notifier.notifyJob(jobInfo);
         if(jobHistorys.size()>=1000){
             Iterator<String> ite = jobHistorys.keySet().iterator();
             for(int i=0;i<50;i++){
@@ -49,6 +57,7 @@ public class JobHistory {
         tasks.addAll(jobInfo.appendTasks());
         tasks.addAll(jobInfo.finishedTasks());
         tasks.addAll(jobInfo.runningTasks());
+        tasks.addAll(jobInfo.failedTasks());
         Set<HTask> htasks = new HashSet<HTask>();
         for(TaskInfo task:tasks){
             TaskAttemptInfo[] attempt = JobManager.getAttempts(task.taskId());
@@ -56,7 +65,7 @@ public class JobHistory {
             if(attempt.length>0) {
                 for (int i = 0; i < attempt.length; i++) {
                     BeeAttemptReport report = JobManager.getReport(attempt[i].attemptId());
-                    attempts.add(new HAttempt(attempt[i].attemptId(),report.beeId(),report.readNum(),report.writeNum(),format.format(new Date(attempt[i].startTime())),format.format(new Date(attempt[i].finishTime())),report.error(),attempt[i].status()));
+                    attempts.add(new HAttempt(attempt[i].attemptId(),report.beeId(),report.readNum(),report.writeNum(),format.format(new Date(attempt[i].startTime())),format.format(new Date(attempt[i].finishTime())),report.error(),attempt[i].status(),report.bufferSize()));
                 }
             }
             HTask htask = HTask.generateFormTaskInfo(task);
@@ -117,7 +126,7 @@ public class JobHistory {
 
     public static String getSimpleJobDesc(JobInfo info){
         if(info.dbinfos().length>0){
-            return info.dbinfos()[0].sql()+" : "+ArrayUtils.toString(info.dbinfos()[0].tables());
+            return ArrayUtils.toString(info.dbinfos()[0].tables())+" : "+info.dbinfos()[0].sql();
         }
         return "";
     }
@@ -140,8 +149,12 @@ public class JobHistory {
         private String submitTime;
         private String finishTime;
         private String targetDir;
+        private String cmd;
+        private String url;
         private String jobDesc;
         private Set<HTask> tasks;
+        private String user;
+        private String jobname;
         private JobStatus status;
 
         public static HJob generateFromJobInfo(JobInfo ji){
@@ -153,8 +166,45 @@ public class JobHistory {
             job.targetDir = ji.targetDir();
             job.jobDesc = getSimpleJobDesc(ji);
             job.status = ji.status();
+            job.url = ji.notifyUrl();
+            job.cmd = ji.callbackCMD();
+            job.user = ji.user();
+            job.jobname = ji.jobName();
             return job;
         }
+
+        public String getUser() {
+            return user;
+        }
+
+        public void setUser(String user) {
+            this.user = user;
+        }
+
+        public String getJobname() {
+            return jobname;
+        }
+
+        public void setJobname(String jobname) {
+            this.jobname = jobname;
+        }
+
+        public String getCmd() {
+            return cmd;
+        }
+
+        public void setCmd(String cmd) {
+            this.cmd = cmd;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
         public String getFinishTime() {
             return finishTime;
         }
@@ -365,7 +415,8 @@ public class JobHistory {
         private TaskAttemptStatus status;
         private long readNum;
         private long writeNum;
-        public HAttempt(String attemptId,String beeId,long readNum, long writeNum,String startTime, String finishTime, String error, TaskAttemptStatus status) {
+        private long bufferSize;
+        public HAttempt(String attemptId,String beeId,long readNum, long writeNum,String startTime, String finishTime, String error, TaskAttemptStatus status,long bufferSize) {
             this.attemptId = attemptId;
             this.readNum = readNum;
             this.writeNum = writeNum;
@@ -374,6 +425,15 @@ public class JobHistory {
             this.beeId = beeId;
             this.error = error;
             this.status = status;
+            this.bufferSize = bufferSize;
+        }
+
+        public long getBufferSize() {
+            return bufferSize;
+        }
+
+        public void setBufferSize(long bufferSize) {
+            this.bufferSize = bufferSize;
         }
 
         public String getBeeId() {

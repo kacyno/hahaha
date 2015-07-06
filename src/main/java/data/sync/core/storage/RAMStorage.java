@@ -1,11 +1,3 @@
-/**
- * (C) 2010-2011 Alibaba Group Holding Limited.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License 
- * version 2 as published by the Free Software Foundation. 
- * 
- */
 
 
 package data.sync.core.storage;
@@ -16,6 +8,7 @@ import org.apache.log4j.Logger;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -24,14 +17,14 @@ import java.util.concurrent.TimeUnit;
 public class RAMStorage extends Storage {
 	private static final Logger log = Logger.getLogger(RAMStorage.class);
 
-	private LinkedBlockingQueue<Line> mars = null;
+	private BlockingQueue<Line> mars = null;
 
 	@Override
 	public boolean init( int lineLimit,Worker.SinkerExecutor sinker,Worker.FetcherExecutor fetcher) {
 		if (super.init(lineLimit,sinker,fetcher) == false){
 			return false;
 		}
-		this.mars = new LinkedBlockingQueue<Line>(lineLimit);
+		this.mars = new ArrayBlockingQueue<Line>(lineLimit);
 		return true;
 	}
 

@@ -39,6 +39,7 @@
             $('#infoTable').bootstrapTable({
                 data: attemptDic[value]
             });
+            $('#infoTable').bootstrapTable("load", attemptDic[value]);
             BootstrapDialog.show({
                 title: "Task执行详情: " + value,
                 autodestroy: false,
@@ -51,7 +52,6 @@
     </script>
 </head>
 <h3>&nbsp&nbsp<span class="label label-default"><%=request.getParameter("jobid")%></span></h3>
-<%--<h3>&nbsp&nbsp<%=request.getParameter("jobid")%></h3>--%>
 <table
         data-page-size="10"
         data-pagination="true"
@@ -75,23 +75,25 @@
     </thead>
 </table>
 
-<div id="atttempts" style="display: none">
+<div id="atttempts" style="display:none">
     <table data-card-view="true"
            data-classes="table table-hover table-condensed"
            data-striped="true"
            id="infoTable"
            data-sort-name="attemptId"
-           data-sort-order="asc">
+           data-sort-order="asc"
+            >
         <thead>
         <tr>
-            <th data-field="attemptId">AttemptId:</th>
-            <th data-field="beeId">BeeId:</th>
-            <th data-field="readNum">读取记录:</th>
-            <th data-field="writeNum">写入记录:</th>
-            <th data-field="startTime">开始时间:</th>
-            <th data-field="finishTime">结束时间:</th>
-            <th data-field="status">状态:</th>
-            <th data-field="error">错误:</th>
+            <th data-field="attemptId">AttemptId &nbsp:&nbsp</th>
+            <th data-field="beeId">BeeId &nbsp:&nbsp</th>
+            <th data-field="readNum">读取记录 &nbsp:&nbsp</th>
+            <th data-field="writeNum">写入记录 &nbsp:&nbsp</th>
+            <th data-field="bufferSize">缓存大小 &nbsp:&nbsp</th>
+            <th data-field="startTime">开始时间 &nbsp:&nbsp</th>
+            <th data-field="finishTime">结束时间 &nbsp:&nbsp</th>
+            <th data-field="status">状态 &nbsp:&nbsp</th>
+            <th data-field="error">错误 &nbsp:&nbsp</th>
         </tr>
         </thead>
     </table>

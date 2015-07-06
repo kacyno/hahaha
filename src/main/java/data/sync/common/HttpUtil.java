@@ -16,6 +16,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +92,11 @@ public class HttpUtil {
     public static CloseableHttpResponse execute(String url,
                                          Map<String, String> map, HttpType type,int times,int conTimeout,int soTimeout) throws Exception{
 
-        CloseableHttpResponse response = httpClient.execute(getRequest(url, map, type,conTimeout,soTimeout));
+        CloseableHttpResponse response = httpClient.execute(getRequest(url, map, type, conTimeout, soTimeout));
         return response;
+    }
+    public static void execute(String url, Map<String, String> map) throws Exception {
+        CloseableHttpResponse response = execute(url,map,HttpType.GET,1,5,5);
+        response.close();
     }
 }

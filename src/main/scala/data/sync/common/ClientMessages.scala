@@ -17,13 +17,19 @@ object ClientMessages {
                     @BeanProperty ip: String,
                     @BeanProperty port: String,
                     @BeanProperty user: String,
-                    @BeanProperty pwd: String) extends Serializable
+                    @BeanProperty pwd: String
+                     ) extends ClientMessage
 
-  case class SubmitJob(@BeanProperty priority: Int,
+  case class SubmitJob(@BeanProperty var priority: Int,
                        @BeanProperty var dbinfos: Array[DBInfo],
-                       @BeanProperty taskNum: Int,
-                       @BeanProperty targetDir: String) extends ClientMessage
-
+                       @BeanProperty var taskNum: Int,
+                       @BeanProperty callbackCMD: String,
+                       @BeanProperty url:String,
+                       @BeanProperty user:String,
+                       @BeanProperty var jobName:String,
+                       @BeanProperty var targetDir: String) extends ClientMessage
+  case class KillJob(jobId:String) extends ClientMessage
   case class SubmitResult(jobId: String) extends ClientMessage
+  case class KillJobResult(message:String) extends ClientMessage
 
 }

@@ -99,6 +99,7 @@ class Bee(conf:Configuration) extends Logging {
       buffer+= BeeAttemptReport(beeId,worker.getAttempt.attemptId,
         worker.getReadCount,
         worker.getWriteCount,
+        worker.getBufferSize,
         new Date().getTime,
         worker.getError,
         worker.getAttempt.status)

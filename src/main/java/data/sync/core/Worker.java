@@ -43,7 +43,9 @@ public class Worker {
     public long getReadCount() {
         return stat.getReadNum();
     }
-
+    public long getBufferSize(){
+        return storage.size();
+    }
     public long getWriteCount() {
         return stat.getWriteNum();
     }
@@ -112,7 +114,7 @@ public class Worker {
             } catch (Exception e) {
                 error = e.getMessage();
                 bee.failTask(Worker.this);
-                logger.info("sinker:"+attempt.toString(),e);
+                logger.error("sinker:"+attempt.toString(),e);
             }
         }
         public void stop(){

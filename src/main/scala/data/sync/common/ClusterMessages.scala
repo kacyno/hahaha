@@ -40,10 +40,10 @@ object ClusterMessages {
 
     override def hashCode(): Int = taskId.hashCode()
 
-    def isFinished(): Boolean = status == TaskStatus.FAILED || status == TaskStatus.FINISHED
+    def isFinished(): Boolean = status == TaskStatus.FAILED || status == TaskStatus.FINISHED ||status==TaskStatus.KILLED
 
     def finished(status:TaskStatus): Unit ={
-      if(status == TaskStatus.FAILED || status == TaskStatus.FINISHED)
+      if(status == TaskStatus.FAILED || status == TaskStatus.FINISHED || status==TaskStatus.KILLED)
       finishTime = new Date().getTime
       this.status = status
     }
@@ -86,6 +86,11 @@ object ClusterMessages {
                      @BeanProperty appendTasks: java.util.Set[TaskInfo],
                      @BeanProperty runningTasks: java.util.Set[TaskInfo],
                      @BeanProperty finishedTasks: java.util.Set[TaskInfo],
+                     @BeanProperty failedTasks:java.util.Set[TaskInfo],
+                     @BeanProperty callbackCMD: String,
+                     @BeanProperty notifyUrl:String,
+                     @BeanProperty user:String,
+                     @BeanProperty jobName:String,
                      @BeanProperty var status: JobStatus = JobStatus.SUBMITED
                       ) {
     override def equals(obj: scala.Any): Boolean = {
@@ -95,7 +100,7 @@ object ClusterMessages {
     }
     override def hashCode(): Int = jobId.hashCode()
     def finished(status:JobStatus): Unit ={
-      if(status == JobStatus.FAILED || status == JobStatus.FINISHED)
+      if(status == JobStatus.FAILED || status == JobStatus.FINISHED||status==JobStatus.KILLED)
         finishTime = new Date().getTime
       this.status = status
     }
@@ -107,6 +112,7 @@ object ClusterMessages {
                                attemptId: String,
                                readNum: Long,
                                writeNum: Long,
+                               bufferSize:Long,
                                time: Long,
                                error: String = "",
                                status: TaskAttemptStatus) {

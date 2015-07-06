@@ -1,13 +1,3 @@
-/**
- * (C) 2010-2011 Alibaba Group Holding Limited.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License 
- * version 2 as published by the Free Software Foundation. 
- * 
- */
-
-
 package data.sync.core.storage;
 
 import java.util.AbstractQueue;
@@ -18,20 +8,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-
-/**
- * A import class in DataX, represents a region with two swap spaces, one for
- * storing data which from data source, the other one for storing data which 
- * will be transferred to data destination.
- * <p>
- * A classical DoubleQueue, In beginning, space A and space B both empty, then
- * loading task begin to load data to space A, when A is almost full, let the
- * data from data source being loaded to space B, then dumping task begin to
- * dump data from space A to data source. When space A is empty, switch the two
- * spaces for load and dump task. Repeat the above operation.
- * </p>
- * 
- */
 public class DoubleQueue extends AbstractQueue<Line> implements
 		BlockingQueue<Line>, java.io.Serializable {
 	private static final long serialVersionUID = 1L;
@@ -44,26 +20,16 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 
 	private ReentrantLock readLock, writeLock;
 	
-	private Condition notEmpty;
-	
+
 	private Condition notFull;
 	
 	private Condition awake;
 
-	/**
-	 * writeArray : in reader's eyes, reader get data from data source and write data to this line array.
-	 * readArray : in writer's eyes, writer put data to data destination from this line array.
-	 * 
-	 * Because of this is doubleQueue mechanism, the two line will exchange when time is suitable.
-	 * 
-	 */
 	private Line[] writeArray, readArray;
 	
 	private volatile int writeCount, readCount;
 	
 	private int writeArrayHP, writeArrayTP, readArrayHP, readArrayTP;
-	
-	private int byteLimit;
 	
 	private boolean closed = false;
 	
@@ -73,45 +39,25 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 	
 	private long lineTx = 0;
 	
-	/**	received byte number of data from data source(eg:httpreader load data from httpurl) */
 	private long byteRx = 0;
 
-	/**
-	 * Get info of line number in {@link DoubleQueue} space. 
-	 * 
-	 * @return
-	 * 			Information of line number.
-	 * 
-	 */
 	public String info() {
 		return lineRx + ":" + lineTx;
 	}
 
-	/**
-	 * Use the two parameters to construct a {@link DoubleQueue} which hold the swap areas.
-	 * 
-	 * @param	lineLimit
-	 * 			Limit of the line number the {@link DoubleQueue} can hold.
-	 * 
-	 * @param	byteLimit
-	 * 			Limit of the bytes the {@link DoubleQueue} can hold.
-	 * 
-	 */
-	@SuppressWarnings("unchecked")
-	public DoubleQueue(int lineLimit, int byteLimit) {
-		if (lineLimit <= 0 || byteLimit <= 0) {
+
+	public DoubleQueue(int lineLimitt) {
+		if (lineLimit <= 0 ) {
 			throw new IllegalArgumentException(
 					"Queue initial capacity can't less than 0!");
 		}
 		this.lineLimit = lineLimit;
-		this.byteLimit = byteLimit;
 		itemsA = new Line[lineLimit];
 		itemsB = new Line[lineLimit];
 
 		readLock = new ReentrantLock();
 		writeLock = new ReentrantLock();
 
-		notEmpty = readLock.newCondition();
 		notFull = writeLock.newCondition();
 		awake = writeLock.newCondition();
 
@@ -120,35 +66,14 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		spillSize = lineLimit * 8 / 10;
 	}
 
-	/**
-	 * Get line number of the {@link DoubleQueue}
-	 * 
-	 * @return	lineLimit 
-	 * 			Limit of the line number the {@link DoubleQueue} can hold.
-	 * 
-	 */
 	public int getLineLimit() {
 		return lineLimit;
 	}
 
-	/**
-	 * Set line number of the {@link DoubleQueue}.
-	 * 
-	 * @param	capacity
-	 * 			Limit of the line number the {@link DoubleQueue} can hold.
-	 * 
-	 */
 	public void setLineLimit(int capacity) {
 		this.lineLimit = capacity;
 	}
 
-	/**
-	 * Insert one line of record to a apace which buffers the swap data.
-	 * 
-	 * @param	line
-	 * 			The inserted line.
-	 * 
-	 */
 	private void insert(Line line) {
 		writeArray[writeArrayTP] = line;
 		++writeArrayTP;
@@ -157,16 +82,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		byteRx += line.length();
 	}
 
-	/**
-	 * Insert a line array(appointed the limit of array size) of data to a apace which buffers the swap data.
-	 * 
-	 * @param lines
-	 * 			Inserted line array.
-	 * 
-	 * @param size
-	 * 			Limit of inserted size of the line array.
-	 * 
-	 */
 	private void insert(Line[] lines, int size) {
 		for (int i = 0; i < size; ++i) {
 			writeArray[writeArrayTP] = lines[i];
@@ -177,13 +92,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		}
 	}
 
-	/**
-	 * Extract one line of record from the space which contains current data.
-	 * 
-	 * @return	line
-	 * 			A line of data.
-	 * 
-	 */
 	private Line extract() {
 		Line e = readArray[readArrayHP];
 		readArray[readArrayHP] = null;
@@ -194,14 +102,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 	}
 
 
-	/**
-	 * Extract a line array of data from the space which contains current data.
-	 * 
-	 * @param ea
-        * @return
-	 * 			Extracted line number of data.
-	 * 
-	 */
 	private int extract(Line[] ea) {
 		int readsize = Math.min(ea.length, readCount);
 		for (int i = 0; i < readsize; ++i) {
@@ -214,21 +114,7 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		return readsize;
 	}
 
-	/**
-	 * switch condition: read queue is empty && write queue is not empty.
-	 * Notice:This function can only be invoked after readLock is grabbed,or may
-	 * cause dead lock.
-	 * 
-	 * @param	timeout
-	 * 
-	 * @param	isInfinite
-	 *          whether need to wait forever until some other thread awake it.
-	 *          
-	 * @return
-	 * 
-	 * @throws InterruptedException
-	 * 
-	 */
+
 
 	private long queueSwitch(long timeout, boolean isInfinite)
 			throws InterruptedException {
@@ -272,23 +158,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 	}
 
 	
-	/**
-	 * If exists write space, it will return true, and write one line to the space.
-	 * otherwise, it will try to do that in a appointed time,when time is out if still failed, return false. 
-	 * 
-	 * @param	line
-	 * 			a Line.
-	 * 
-	 * @param	timeout
-	 * 			appointed limit time
-	 * 
-	 * @param	unit
-	 * 			time unit
-	 * 
-	 * @return
-	 * 			True if success,False if failed.
-	 * 
-	 */
 	public boolean offer(Line line, long timeout, TimeUnit unit)
 			throws InterruptedException {
 		if (line == null) {
@@ -323,29 +192,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		}
 	}
 
-	/**
-	 * If exists write space, it will return true, and write a line array to the space.<br>
-	 * otherwise, it will try to do that in a appointed time,when time out if still failed, return false. 
-	 * 
-	 * @param	lines
-	 * 			line array contains lines of data
-	 * 
-	 * @param	size
-	 * 			Line number needs to write to the space.
-	 * 
-	 * @param	timeout
-	 * 			appointed limit time
-	 * 
-	 * @param	unit
-	 * 			time unit
-	 * 
-	 * @return
-	 * 			status of this operation, true or false.
-	 * 
-	 * @throws	InterruptedException
-	 * 			if being interrupted during the try limit time.
-	 * 
-	 */
 	public boolean offer(Line[] lines, int size, long timeout, TimeUnit unit)
 			throws InterruptedException {
 		if (lines == null) {
@@ -380,10 +226,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		}
 	}
 
-	/**
-	 * Close the synchronized lock and one inner state.
-	 * 
-	 */
 	public void close() {
 		writeLock.lock();
 		try {
@@ -395,15 +237,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 	}
 
 	
-	/**
-	 * 
-	 * 
-	 * @param	timeout
-	 * 			appointed limit time
-	 * 
-	 * @param	unit
-	 * 			time unit
-	 */
 	public Line poll(long timeout, TimeUnit unit) throws InterruptedException {
 		long nanoTime = unit.toNanos(timeout);
 		readLock.lockInterruptibly();
@@ -423,24 +256,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 			readLock.unlock();
 		}
 	}
-
-	/**
-	 * 
-	 * @param ea    line buffer
-	 *
-	 * 
-	 * @param	timeout
-	 * 			a appointed limit time
-	 * 
-	 * @param	unit
-	 * 			a time unit
-	 * 
-	 * @return
-	 * 			line number of data.if less or equal than 0, means fail.
-	 * 
-	 * @throws	InterruptedException
-	 * 			if being interrupted during the try limit time.
-	 */
 	public int poll(Line[] ea, long timeout, TimeUnit unit)
 			throws InterruptedException {
 		long nanoTime = unit.toNanos(timeout);
@@ -470,13 +285,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		return null;
 	}
 
-	/**
-	 * Get size of {@link Storage} in bytes.
-	 * 
-	 * @return
-	 * 			Storage size.
-	 * 
-	 * */
 	@Override
 	public int size() {
 		return (writeCount + readCount);
@@ -492,16 +300,6 @@ public class DoubleQueue extends AbstractQueue<Line> implements
 		return 0;
 	}
 
-	/**
-	 * If exists write space, it will return true, and write one line to the space.<br>
-	 * otherwise, it will try to do that in a appointed time(20 milliseconds),when time out if still failed, return false. 
-	 * 
-	 * @param	line
-	 * 			a Line.
-	 * 
-	 * @see DoubleQueue#offer(Line, long, TimeUnit)
-	 * 			
-	 */
 	@Override
 	public boolean offer(Line line) {
 		try {

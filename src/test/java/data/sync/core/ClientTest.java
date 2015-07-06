@@ -10,11 +10,7 @@ import org.junit.Test;
 public class ClientTest {
     @Test
     public void test1() {
-        ClientMessages.SubmitJob job = new ClientMessages.SubmitJob(1,
-                new ClientMessages.DBInfo[]{new ClientMessages.DBInfo("select * from %s ", "id", new String[]{"import_cps_confirm_1"}, "test", "localhost", "3306", "root", "lkmlnfqp")}
-                , 4
-                , "/Users/hesiyuan/honey-data/");
-        HoneyClient.submitJob(job);
+        System.out.println((HoneyClient.killJob(new ClientMessages.KillJob("job_30aee700-bfd2-45fc-81e6-7d367db0c219"))));
     }
 
     @Test

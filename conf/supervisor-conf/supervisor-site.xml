@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+	<!-- supervisor核心配置 -->
+	<property>
+		<name>supervisor.alarm.classes</name>
+		<value>data.sync.supervisor.alarm.alarmimpl.MailAlarm</value>
+		<description>
+		系统支持的报警，添加时将新的类文件放于supervisor classpath下，
+		将类全路径添加至此即可，多个用逗号分开
+		</description>
+	</property>
+	<property>
+		<name>supervisor.http.port</name>
+		<value>8044</value>
+		<description>http端口</description>
+	</property>
+	<property>
+		<name>supervisor.paths</name>
+		<value>honey</value>
+		<description>
+		路径配置，使用逗号分开，对应的必须要有supervisor.path.servlet
+		来指定servlet类
+		</description>
+	</property>
+	
+	<!-- 针对honey监控组件的配置 -->
+	<property>
+		<name>supervisor.honey.servlet</name>
+		<value>data.sync.supervisor.servlet.HoneyServlet</value>
+		<description>用于监控honey作业状态</description>
+	</property>
+	<property>
+		<name>supervisor.honey.messsage.send.times</name>
+		<value>5</value>
+		<description>消息发送重试次数,-1表示不限制</description>
+	</property>
+	<property>
+		<name>supervisor.honey.alarms</name>
+		<value>MailAlarm</value>
+		<description>
+		报警方式指定，多个用逗号分开，每种方式需要有对应的supervisor.honey.alarm.alarmtype.targets
+		来指定标
+		</description>
+	</property>
+	<property>
+		<name>supervisor.honey.alarm.targets.groups</name>
+		<value>test,gg</value>
+	</property>
+	<property>
+		<name>supervisor.honey.alarm.MailAlarm.test.targets</name>
+		<value>hesiyuan@360.cn</value>
+		<description>报警目标指定，多个用逗号分开</description>
+	</property>
+	<property>
+		<name>supervisor.honey.alarm.MailAlarm.gg.targets</name>
+		<value></value>
+		<description>报警目标指定，多个用逗号分开</description>
+	</property>
+
+	<!-- 针对MailAlarm的配置 -->
+	<property>
+		<name>supervisor.alarm.mail.host</name>
+		<value>mail.163.com</value>
+		<description>邮件服务器地址</description>
+	</property>
+	<property>
+		<name>supervisor.alarm.mail.user</name>
+		<value>kacyno</value>
+		<description>邮件服务器用户</description>
+	</property>
+	<property>
+		<name>supervisor.alarm.mail.pwd</name>
+		<value>lkmlnfqp</value>
+		<description>邮件服务器密码</description>
+	</property>
+		<property>
+		<name>supervisor.alarm.mail.from</name>
+		<value>kacyno@163.com</value>
+		<description>邮件发送源地址</description>
+	</property>
+</configuration>

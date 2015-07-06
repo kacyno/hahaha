@@ -94,6 +94,7 @@ attemptId: "job_0ac6cc94-6099-46fb-b73e-f29b99279a77_task_3-attempt-1"
         map.put("taskId", tuple2._1().taskDesc().taskId());
         map.put("jobId", tuple2._1().taskDesc().jobId());
         map.put("readNum", String.valueOf(tuple2._2().readNum()));
+        map.put("bufferSize",String.valueOf(tuple2._2().bufferSize()));
         map.put("writeNum", String.valueOf(tuple2._2().writeNum()));
         map.put("startTime", JobHistory.format.format(new Date(tuple2._1().startTime())));
         map.put("endTime", JobHistory.format.format(new Date(tuple2._1().finishTime())));

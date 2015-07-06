@@ -1,7 +1,6 @@
 package data.sync.core.storage;
 
 
-
 import data.sync.core.Worker;
 
 import java.text.SimpleDateFormat;

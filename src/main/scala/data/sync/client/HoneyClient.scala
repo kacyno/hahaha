@@ -1,15 +1,12 @@
 package data.sync.client
 
-import java.util.concurrent.TimeUnit
-import akka.util.Timeout
 import akka.util.Timeout._
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import data.sync.common.ClientMessages.{SubmitResult, DBInfo, SubmitJob}
-import data.sync.common.{AkkaUtils, Constants, Configuration}
+import data.sync.common.ClientMessages._
+import data.sync.common.{NetUtil, AkkaUtils, Constants, Configuration}
 import net.sf.json.JSONObject
-import net.sf.json.util.JSONUtils
-import org.apache.commons.beanutils.BeanUtils
+import org.apache.commons.lang.StringUtils
 import scala.collection.JavaConversions._
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -21,8 +18,14 @@ import scala.io.Source
 object HoneyClient {
   val conf = new Configuration()
   conf.addResource(Constants.CONFIGFILE_NAME)
-
-
+  var confPath:String = null
+  var outputPath:String = null
+  var taskNum:Int = 2
+  var isSubmit:Boolean = false
+  var isKill:Boolean = false
+  var jobId:String = null
+  var jobName:String = null
+  var user = System.getProperties.getProperty("user.name")+"@"+NetUtil.getHostname
   val akkaConf = ConfigFactory.parseMap(scala.collection.mutable.Map[String, String]())
     .withFallback(ConfigFactory.parseString(
     s"""
@@ -43,24 +46,47 @@ object HoneyClient {
   val host = conf.get(Constants.QUEEN_ADDR, Constants.QUEEN_ADDR_DEFAULT)
   val port = conf.getInt(Constants.QUEEN_PORT, Constants.QUEEN_PORT_DEFAULT)
   val queenUrl = urlPattern.format(Constants.QUEEN_NAME, host, port, Constants.QUEEN_NAME)
-  println(queenUrl)
   val greeter = system.actorSelection(queenUrl)
 
-  def submitJob(job: SubmitJob): String = {
-    val actorRef = Await.result(greeter.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
+  val actorRef = Await.result(greeter.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
+  def submitJobToQueen(job: SubmitJob): String = {
     AkkaUtils.askWithReply[SubmitResult](job, actorRef, Duration.create(5, "seconds")).toString
   }
-
-  def main(args: Array[String]) {
-    if (args.length != 1)
-      println("Usage: HoneyClient [job-conf-path]")
-    else {
-      val source = Source.fromFile(args(0),"UTF-8")
-      val desc = source.mkString
-//      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
-      println(submitJob(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
-    }
+  def killJob(kill:KillJob):String={
+    AkkaUtils.askWithReply[KillJobResult](kill, actorRef, Duration.create(50, "seconds")).toString
   }
+  def main(args: Array[String]) {
+    if (args.length ==0)
+      printUsageAndExit(1)
+    else {
+      parseOpts(args.toList)
+      if(isSubmit) {
+        if(confPath==null)
+          println("miss job-conf-path [-conf]")
+        val source = Source.fromFile(confPath, "UTF-8")
+        val desc = source.mkString
+        //      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
+        val submitJob = parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))
+        if(submitJob.taskNum==0)
+          submitJob.taskNum=taskNum
+        if(StringUtils.isEmpty(submitJob.targetDir))
+          submitJob.targetDir=outputPath
+        if(StringUtils.isEmpty(submitJob.jobName))
+          submitJob.jobName = jobName
+        if(StringUtils.isEmpty(submitJob.targetDir))
+          println("miss job-output-path [-output]")
+        if(StringUtils.isEmpty(submitJob.targetDir))
+          println("miss job-name [-name]")
+        println(submitJobToQueen(submitJob))
+      }
+      if(isKill){
+        println(killJob(KillJob(jobId)))
+      }
+    }
+    system.shutdown()
+  }
+
+
   def parseJSONObjectToSubmitJob(json:JSONObject):SubmitJob={
     SubmitJob(json.getInt("priority"),json.getJSONArray("dbinfos").map(e=>{
       val jobj = e.asInstanceOf[JSONObject]
@@ -73,6 +99,74 @@ object HoneyClient {
         jobj.getString("user"),
         jobj.getString("pwd"))
     }
-    ).toArray,json.getInt("taskNum"),json.getString("targetDir"))
+    ).toArray,json.getInt("taskNum"),json.getString("callbackCMD"),json.getString("notifyUrl"),user,json.getString("jobName"),json.getString("targetDir"))
+  }
+  private def parseOpts(opts: Seq[String]): Unit = {
+    parse(opts)
+    def parse(opts: Seq[String]): Unit = opts match {
+      case ("-submit")  :: tail =>
+        isSubmit=true
+        if(isKill){
+          printConflictInfo
+        }
+        parse(tail)
+
+      case ("--conf") :: value :: tail =>
+        confPath = value
+        isSubmit=true
+        parse(tail)
+      case ("--name") :: value :: tail =>
+        jobName = value
+        parse(tail)
+
+      case ("--output") :: value :: tail =>
+        outputPath = value
+        parse(tail)
+
+      case ("--number") :: value :: tail =>
+         taskNum = value.toInt
+        parse(tail)
+      case ("-kill") :: value :: tail =>
+        isKill = true
+        jobId = value
+        if (isSubmit) {
+          printConflictInfo
+        }
+        parse(tail)
+
+      case ("--help" | "-h") :: tail =>
+        printUsageAndExit(1)
+
+      case value :: tail if value.startsWith("-") =>
+        printUsageAndExit(1,value)
+
+      case value :: tail =>
+        printUsageAndExit(1)
+
+      case Nil =>
+    }
+  }
+  private def printConflictInfo(): Unit ={
+    println("Action cannot be both Submit and Kill.")
+  }
+  private def printUsageAndExit(exitCode: Int,unknownParam: Any = null): Unit = {
+    if (unknownParam != null) {
+      println("Unknown/unsupported param " + unknownParam)
+    }
+    println(
+      """Usage: honey -submit [options]
+        |Usage: honey -kill [job ID]
+        |
+        |Options:
+        |  --output  job-output-path
+        |  --number  job-task-number
+        |  --conf    job-conf-path
+        |  --name    job-name
+        |  --help, -h
+
+      """.stripMargin
+    )
+    system.shutdown()
+    System.exit(exitCode)
   }
 }

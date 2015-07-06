@@ -32,8 +32,13 @@ public class JobInfoRest {
             map.put("appendTasks",String.valueOf(job.appendTasks().size()));
             map.put("runningTasks",String.valueOf(job.runningTasks().size()));
             map.put("finishedTasks",String.valueOf(job.finishedTasks().size()));
+            map.put("failedTasks",String.valueOf(job.failedTasks().size()));
             map.put("startTime",JobHistory.format.format(new Date(job.submitTime())));
             map.put("targetDir",job.getTargetDir());
+            map.put("jobName",job.jobName());
+            map.put("user",job.getUser());
+            map.put("cmd",job.callbackCMD());
+            map.put("url",job.notifyUrl());
             map.put("status",job.getStatus().toString());
             list.add(map);
         }
@@ -55,6 +60,10 @@ public class JobInfoRest {
             map.put("finishedTime",job.getFinishTime());
             map.put("targetDir",job.getTargetDir());
             map.put("priority",String.valueOf(job.getPriority()));
+            map.put("jobName",job.getJobname());
+            map.put("user",job.getUser());
+            map.put("cmd",job.getCmd());
+            map.put("url",job.getUrl());
             map.put("status",job.getStatus().toString());
             list.add(map);
         }

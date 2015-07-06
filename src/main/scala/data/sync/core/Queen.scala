@@ -3,11 +3,10 @@ package data.sync.core
 import java.util.Date
 import akka.actor.{ActorRef, Props, Actor}
 import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
-import data.sync.common.ClientMessages.{SubmitResult, DBInfo, SubmitJob}
+import data.sync.common.ClientMessages.{KillJobResult, SubmitResult, DBInfo, SubmitJob}
 import data.sync.common._
 import data.sync.common.ClusterMessages._
 import data.sync.common.Logging
-import data.sync.common.alarm.AlarmCenter
 import data.sync.http.server.HttpServer
 import net.sf.json.JSONObject
 
@@ -24,16 +23,31 @@ class Queen extends Actor with ActorLogReceive with Logging {
       val beeId = registerBee(cores, sender)
       sender ! ClusterMessages.RegisteredBee(beeId)
       assignTask()
-    case job @ SubmitJob(priority, dbinfos, taskNum, targetDir) =>
+    case job @ SubmitJob(priority, dbinfos, taskNum, cmd,url,user,jobName,targetDir) =>
       logInfo(
         """
           |Submit job from %s
           |Job desc:
           |%s
         """.stripMargin.format(sender.path.address,JSONObject.fromObject(job).toString()))
-      val jobId = submitJob(priority, dbinfos, taskNum, targetDir)
-      sender ! SubmitResult(jobId)
+      try {
+        val jobId = submitJob(priority, dbinfos, taskNum, targetDir, cmd, url, user, jobName)
+        sender ! SubmitResult(jobId)
+      }catch{
+        case e:Exception=>
+          logError("submit job error",e)
+          sender!SubmitResult(e.getMessage)
+      }
     case StatusUpdate(beeId, reports) => updateBees(beeId, reports)
+    case data.sync.common.ClientMessages.KillJob(jobId)=>
+      try {
+        JobManager.killJob(jobId, JobStatus.KILLED)
+      }catch{
+        case e:Exception=>
+          logError("kill error "+jobId,e)
+          sender ! KillJobResult(e.getMessage)
+      }
+      sender ! KillJobResult(s"killing job $jobId")
     case x: DisassociatedEvent =>
       removeBee(x)
       logWarning(s"Received irrelevant DisassociatedEvent $x")
@@ -50,6 +64,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
     if (x.remoteAddress.toString.indexOf("bee") != -1) {
       val bee = BeeManager.getBeeByAddress(x.remoteAddress)
       if (bee != null) {
+        logInfo("Remove bee "+bee.beeId)
         BeeManager.removeBee(bee.beeId)
         JobManager.removeAttemptByBee(bee.beeId, this)
         assignTask()
@@ -64,7 +79,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
    */
   def registerBee(cores: Int, sender: ActorRef): String = {
     val beeId = sender.path.address.hostPort
-    logInfo("Registering Executor：" + beeId)
+    logInfo("Registering Bee：" + beeId)
     BeeManager.updateBee(BeeDesc(0, cores, beeId, sender))
     beeId
   }
@@ -93,7 +108,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
   /*
    *将作业拆分成多个TaskDesc,并封装在Job中放入队列
    */
-  def submitJob(priority: Int, dbinfos: Array[DBInfo], num: Int, dir: String): String = {
+  def submitJob(priority: Int, dbinfos: Array[DBInfo], num: Int, dir: String,cmd:String,url:String,user:String,jobName:String): String = {
     val jobId = IDGenerator.generatorJobId();
     val tasks = SimpleSplitter.split(jobId, dbinfos, num, dir)
     val job = JobInfo(jobId,
@@ -106,12 +121,19 @@ class Queen extends Actor with ActorLogReceive with Logging {
       tasks,
       new java.util.HashSet[TaskInfo](),
       new java.util.HashSet[TaskInfo](),
+      new java.util.HashSet[TaskInfo](),
+      cmd,
+      url,
+      user,
+      jobName,
       JobStatus.SUBMITED
     )
     JobManager.addJob(job)
     //加入调度
     FIFOScheduler.addJob(job)
+    Notifier.notifyJob(job)
     assignTask()
+    //作业提交后进行一次通知
     jobId
   }
 
@@ -122,7 +144,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
   def assignTask(): Unit = {
     val assigns = FIFOScheduler.assigns
     for ((beeId, tad) <- assigns) {
-      logInfo("send task: " + tad + " to bee:" + beeId)
+      logInfo("send task: " + tad.attemptId + " to bee:" + beeId)
       BeeManager.getBee(beeId).sender ! StartTask(tad)
       //当任发送给Bee后即认为任务开始
       if(tad.taskDesc.startTime == 0)
@@ -145,7 +167,7 @@ class Queen extends Actor with ActorLogReceive with Logging {
             if (JobManager.checkTimeOut())
               assignTask()
           } catch {
-            case e: Throwable => logInfo("checker error", e)
+            case e: Throwable => logInfo("Checker error", e)
           }
         }
       }
@@ -177,7 +199,7 @@ object Queen extends Logging {
     val httpServer = new HttpServer(conf)
     httpServer.start()
     JobHistory.init()
-    AlarmCenter.start(conf)
+    Notifier.start()
     run(conf)
   }
 

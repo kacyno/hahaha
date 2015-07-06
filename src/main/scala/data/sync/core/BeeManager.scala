@@ -35,15 +35,19 @@ object BeeManager {
     connDic
   }
   //找出最闲的Bee
-  def getMostFreeBee():Option[String]={
+  def getMostFreeBee(excludeBee:String):Option[String]={
     if(connDic.isEmpty)
       None
     else {
       val (beeId, desc) = connDic.reduce((b1, b2) => {
-        if ((b1._2.runningWorker.asInstanceOf[Float] / b1._2.totalWorker) < (b2._2.runningWorker.asInstanceOf[Float] / b2._2.totalWorker))
-          b1
-        else
-          b2
+        excludeBee match {
+          case b1._1=>b2
+          case b2._1=>b1
+          case _=> if ((b1._2.runningWorker.asInstanceOf[Float] / b1._2.totalWorker) < (b2._2.runningWorker.asInstanceOf[Float] / b2._2.totalWorker))
+            b1
+          else
+            b2
+        }
       })
       if (desc.totalWorker > desc.runningWorker)
         Some(beeId)

@@ -1,7 +1,7 @@
-package data.sync.common.alarm;
+package data.sync.supervisor.alarm;
 
 public abstract class AbstractAlarm implements Alarm {
-	public String getAlarmName() {
+	public String getQueueName() {
 		return this.getClass().getSimpleName();
 	}
 
