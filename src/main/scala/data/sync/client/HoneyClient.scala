@@ -41,14 +41,14 @@ object HoneyClient {
       """.stripMargin))
 
 
-  val system = ActorSystem("Client", akkaConf)
+  lazy val system = ActorSystem("Client", akkaConf)
   val urlPattern = "akka.tcp://%s@%s:%d/user/%s"
   val host = conf.get(Constants.QUEEN_ADDR, Constants.QUEEN_ADDR_DEFAULT)
   val port = conf.getInt(Constants.QUEEN_PORT, Constants.QUEEN_PORT_DEFAULT)
   val queenUrl = urlPattern.format(Constants.QUEEN_NAME, host, port, Constants.QUEEN_NAME)
-  val greeter = system.actorSelection(queenUrl)
+  lazy val greeter = system.actorSelection(queenUrl)
 
-  val actorRef = Await.result(greeter.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
+  lazy val actorRef = Await.result(greeter.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
   def submitJobToQueen(job: SubmitJob): String = {
     AkkaUtils.askWithReply[SubmitResult](job, actorRef, Duration.create(5, "seconds")).toString
   }
@@ -61,25 +61,34 @@ object HoneyClient {
     else {
       parseOpts(args.toList)
       if(isSubmit) {
-        if(confPath==null)
+        if(StringUtils.isEmpty(confPath)) {
           println("miss job-conf-path [-conf]")
+          System.exit(1)
+        }
         val source = Source.fromFile(confPath, "UTF-8")
         val desc = source.mkString
         //      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
         val submitJob = parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))
-        if(submitJob.taskNum==0)
+        if(taskNum>0)
           submitJob.taskNum=taskNum
-        if(StringUtils.isEmpty(submitJob.targetDir))
+        if(StringUtils.isNotEmpty(outputPath))
           submitJob.targetDir=outputPath
-        if(StringUtils.isEmpty(submitJob.jobName))
+        if(StringUtils.isNotEmpty(jobName))
           submitJob.jobName = jobName
-        if(StringUtils.isEmpty(submitJob.targetDir))
+        if(StringUtils.isEmpty(submitJob.targetDir)) {
           println("miss job-output-path [-output]")
-        if(StringUtils.isEmpty(submitJob.targetDir))
+          System.exit(1)
+        }
+        if(StringUtils.isEmpty(submitJob.jobName)) {
           println("miss job-name [-name]")
+          System.exit(1)
+        }
         println(submitJobToQueen(submitJob))
       }
       if(isKill){
+        if(StringUtils.isEmpty(jobId)){
+          printUsageAndExit(1)
+        }
         println(killJob(KillJob(jobId)))
       }
     }
@@ -154,7 +163,8 @@ object HoneyClient {
       println("Unknown/unsupported param " + unknownParam)
     }
     println(
-      """Usage: honey -submit [options]
+      """
+        |Usage: honey -submit [options]
         |Usage: honey -kill [job ID]
         |
         |Options:
@@ -166,7 +176,6 @@ object HoneyClient {
 
       """.stripMargin
     )
-    system.shutdown()
     System.exit(exitCode)
   }
 }

@@ -25,7 +25,7 @@ done
 
 export CLASSPATH
 
-exec nohup "$JAVA" $JAVA_HEAP_MAX -cp $CLASSPATH com.emar.nbt.supervisor.main.Supervisor "$@" >/dev/null 2>&1 &
+exec nohup "$JAVA" $JAVA_HEAP_MAX -cp $CLASSPATH data.sync.supervisor.main.Supervisor "$@" >/dev/null 2>&1 &
 
 echo $! >$PIDFILE
 echo STARTED

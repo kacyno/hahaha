@@ -61,7 +61,7 @@
 	<!-- 针对MailAlarm的配置 -->
 	<property>
 		<name>supervisor.alarm.mail.host</name>
-		<value>mail.163.com</value>
+		<value>smtp.163.com</value>
 		<description>邮件服务器地址</description>
 	</property>
 	<property>

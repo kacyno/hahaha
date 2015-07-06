@@ -6,7 +6,7 @@
       "ip": "localhost",
       "port": "3306",
       "pwd": "lkmlnfqp",
-      "sql": "select * from %s ",
+      "sql": "select abc from %s ",
       "tables": ["import_cps_confirm_1"],
       "user": "root"
     }
@@ -14,7 +14,7 @@
   "priority": 1,
   "callbackCMD": "/Users/hesiyuan/testdir/bin/test.sh aa",
   "notifyUrl": "http://localhost:8044/supervisor/honey",
-  "jobName" : "JobTest",
+  "jobName" : "test-job",
   "targetDir": "/Users/hesiyuan/testdir/data/",
   "taskNum": 4
 }

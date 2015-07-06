@@ -72,7 +72,7 @@ public class HoneyServlet extends HttpServlet {
                     String title = jobName;
                     message.setRetryTimes(sendTimes);
                     message.setTitle(title );
-                    message.setBody(jobId+"@"+user+" "+status);
+                    message.setBody(jobId+"::"+user+" "+status);
                     message.setTargets(targets);
                     Supervisor.queueMap.get(key).add(message);
                 }

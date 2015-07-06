@@ -65,7 +65,7 @@ case $startStop in
 
 
 
-        PIDFILE= $command.pid
+        PIDFILE=$command.pid
         if [ ! -f $PIDFILE ]
         then
                 echo "error: count not find file $PIDFILE"

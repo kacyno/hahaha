@@ -29,6 +29,7 @@ object ClientMessages {
                        @BeanProperty var jobName:String,
                        @BeanProperty var targetDir: String) extends ClientMessage
   case class KillJob(jobId:String) extends ClientMessage
+  KillJob("asf").equals("ad")
   case class SubmitResult(jobId: String) extends ClientMessage
   case class KillJobResult(message:String) extends ClientMessage
 
