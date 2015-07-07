@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import data.sync.common.ClusterMessages._
 import data.sync.common.{Logging, Constants}
+import data.sync.core.ha.PersistenceEngine
 import net.sf.json.{JSONObject, JSONArray}
 import org.apache.commons.lang.{ArrayUtils, StringUtils}
 import org.apache.hadoop.conf.Configuration
@@ -30,6 +31,12 @@ object JobManager extends Logging {
   private val attempt2bee = new ConcurrentHashMap[String, String]
   //taskAttempt->report
   private val attempt2report = new ConcurrentHashMap[String, BeeAttemptReport]
+
+  private var persist:PersistenceEngine=null
+
+  def init(persist:PersistenceEngine): Unit ={
+    this.persist = persist
+  }
 
   def printMem(): Unit = {
     println(
@@ -277,6 +284,9 @@ object JobManager extends Logging {
   def clearJob(jobId: String): Unit = {
     //将历史保存
     JobHistory.addJobToHistory(jobId)
+    //将job备份清除
+    persist.removeJob(jobId)
+
     //清理数据
     val job = jobDic(jobId)
 

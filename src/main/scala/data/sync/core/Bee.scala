@@ -3,70 +3,167 @@ package data.sync.core
 import java.util
 import java.util.{Date, Collections}
 import java.util.concurrent.{ThreadPoolExecutor, Executors}
-import akka.actor.{ActorSelection, Props, Actor}
+import akka.actor._
 import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import data.sync.common._
 import ClusterMessages._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by hesiyuan on 15/6/19.
  */
-class Bee(conf:Configuration) extends Logging {
-  var driver: ActorSelection = null
+class Bee(conf: Configuration) extends Logging {
   private val daemonThreadFactoryBuilder: ThreadFactoryBuilder =
     new ThreadFactoryBuilder().setDaemon(true)
   private val executorPool = Executors.newCachedThreadPool(daemonThreadFactoryBuilder.build()).asInstanceOf[ThreadPoolExecutor]
   private val workerSet = Collections.synchronizedSet(new util.HashSet[Worker]) //将正在运行的worker放在这里以便进行统一管理
-  var beeId:String=null
-  val queenHost = conf.get(Constants.QUEEN_ADDR,Constants.QUEEN_ADDR_DEFAULT)
-  val queenPort = conf.getInt(Constants.QUEEN_PORT,Constants.QUEEN_PORT_DEFAULT)
-  val beeHost = conf.get(Constants.BEE_ADDR,Constants.BEE_ADDR_DEFAULT)
-  val beePort = conf.getInt(Constants.BEE_PORT,Constants.BEE_PORT_DEFAULT)
-  val queenUrl = "akka.tcp://%s@%s:%d/user/%s".format(Constants.QUEEN_NAME,queenHost,queenPort,Constants.QUEEN_NAME)
-  val beeWorkerNum = conf.getInt(Constants.BEE_WORKER_NUM,Constants.BEE_WORKER_NUM_DEFAULT)
+
+  var beeId: String = null
+
+  val beeHost = conf.get(Constants.BEE_ADDR, Constants.BEE_ADDR_DEFAULT)
+  val beePort = conf.getInt(Constants.BEE_PORT, Constants.BEE_PORT_DEFAULT)
+
+  val hostAndPorts = conf.getStrings(Constants.QUEENS_HOSTPORT)
+  val queenUrls = hostAndPorts.map(e => {
+    val hp = e.split(":")
+    "akka.tcp://%s@%s:%s/user/%s".format(Constants.QUEEN_NAME, hp(0), hp(1), Constants.QUEEN_NAME)
+  })
+  val beeWorkerNum = conf.getInt(Constants.BEE_WORKER_NUM, Constants.BEE_WORKER_NUM_DEFAULT)
+
+  var master: ActorSelection = null
+  var activeMasterUrl: String = ""
+  var registrationRetryTimer: Option[Cancellable] = None
+  @volatile var registered = false
+  @volatile var connected = false
+  var connectionAttemptCount = 0
+
+
   class BeeActor extends Actor with ActorLogReceive with Logging {
     override def receiveWithLogging = {
-      case RegisteredBee(id) => beeId = id;logInfo("Registered Executor!!");startDriverHeartbeater
+      case RegisteredBee(queenUrl, id) =>
+        beeId = id;
+        logInfo("Registered Executor!!")
+        registered = true
+        changeMaster(queenUrl)
       case StartTask(tad) => startTask(tad)
       case KillJob(jobId) => killJob(jobId)
-      case StopAttempt(attemptId)=> stopAttempt(attemptId)
+      case StopAttempt(attemptId) => stopAttempt(attemptId)
+      case ReregisterWithMaster =>
+        reregisterWithMaster()
       case x: DisassociatedEvent =>
-        logWarning(s"Received irrelevant DisassociatedEvent $x")
-        System.exit(1)
+        stopAll()
+        masterDisconnected()
     }
 
     override def preStart() {
-      logInfo("Connecting to driver: " + queenUrl)
-      driver = context.actorSelection(queenUrl)
-      driver ! RegisterBee (beeWorkerNum)
       context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
+      //连接Queen
+      registerWithMaster()
+    }
+
+    private def tryRegisterAllMasters() {
+      for (masterAkkaUrl <- queenUrls) {
+        logInfo("Connecting to queen " + masterAkkaUrl + "...")
+        val actor = context.actorSelection(masterAkkaUrl)
+        actor ! RegisterBee(beeWorkerNum)
+      }
+    }
+
+    def changeMaster(url: String) {
+      activeMasterUrl = url
+      master = context.actorSelection(url)
+      connected = true
+      registrationRetryTimer.foreach(_.cancel())
+      registrationRetryTimer = None
+      startDriverHeartbeater
+    }
+
+    private def masterDisconnected() {
+      logError("Connection to queen failed! Waiting for master to reconnect...")
+      connected = false
+      stopDriverHeaertbeater
+      master = null
+      registerWithMaster()
+    }
+
+
+    private def reregisterWithMaster(): Unit = {
+      connectionAttemptCount += 1
+      if (registered) {
+        registrationRetryTimer.foreach(_.cancel())
+        registrationRetryTimer = None
+      } else if (connectionAttemptCount <= 100) {
+        logInfo(s"Retrying connection to queen (attempt # $connectionAttemptCount)")
+        if (master != null) {
+          master ! RegisterBee(beeWorkerNum)
+        } else {
+          tryRegisterAllMasters()
+        }
+        if (connectionAttemptCount == 10) {
+          registrationRetryTimer.foreach(_.cancel())
+          registrationRetryTimer = Some {
+            context.system.scheduler.schedule(5.seconds,
+              5.seconds, self, ReregisterWithMaster)
+          }
+        }
+      } else {
+        logError("All queens are unresponsive! Giving up.")
+        System.exit(1)
+      }
+    }
+
+    def registerWithMaster() {
+      registrationRetryTimer match {
+        case None =>
+          registered = false
+          tryRegisterAllMasters()
+          connectionAttemptCount = 0
+          registrationRetryTimer = Some {
+            context.system.scheduler.schedule(1.seconds,
+              1.seconds, self, ReregisterWithMaster)
+          }
+        case Some(_) =>
+          logInfo("Not spawning another attempt to register with the queen, since there is an" +
+            " attempt scheduled already.")
+      }
     }
   }
-  private def stopAttempt(attemptId:String): Unit ={
-    for(worker<-workerSet){
-      if(worker.getAttempt.attemptId==attemptId){
+
+  private def stopAttempt(attemptId: String): Unit = {
+    for (worker <- workerSet) {
+      if (worker.getAttempt.attemptId == attemptId) {
         worker.getFetcher.stop();
         worker.getSinker.stop();
       }
     }
   }
-  private def killJob(jobId:String): Unit ={
-    for(worker<-workerSet){
-      if(worker.getJobId==jobId){
+
+  private def stopAll(): Unit = {
+    for (worker <- workerSet) {
+      worker.getFetcher.stop()
+      worker.getSinker.stop()
+    }
+  }
+
+  private def killJob(jobId: String): Unit = {
+    for (worker <- workerSet) {
+      if (worker.getJobId == jobId) {
         worker.getFetcher.stop();
         worker.getSinker.stop();
       }
     }
   }
+
   /*
   开始任务
    */
   private def startTask(tad: TaskAttemptInfo) = synchronized {
-    logInfo("Get Task:"+tad)
-    val worker = new Worker(conf,tad, this)
+    logInfo("Get Task:" + tad)
+    val worker = new Worker(conf, tad, this)
     worker.getAttempt.status = TaskAttemptStatus.RUNNING
     executorPool.execute(worker.getFetcher)
     executorPool.execute(worker.getSinker)
@@ -80,23 +177,26 @@ class Bee(conf:Configuration) extends Logging {
     updateStatus();
     workerSet -= worker
   }
-  def failTask(worker:Worker): Unit ={
+
+  def failTask(worker: Worker): Unit = {
     worker.getAttempt.status = TaskAttemptStatus.FAILED
     worker.getFetcher.stop()
     worker.getSinker.stop()
     finishTask(worker)
   }
-  def successTask(worker:Worker): Unit ={
+
+  def successTask(worker: Worker): Unit = {
     worker.getAttempt.status = TaskAttemptStatus.FINISHED
     finishTask(worker)
   }
+
   /*
   向queen进行状态汇报
    */
   def updateStatus() = {
     var buffer = ArrayBuffer[BeeAttemptReport]()
-    for(worker<-workerSet){
-      buffer+= BeeAttemptReport(beeId,worker.getAttempt.attemptId,
+    for (worker <- workerSet) {
+      buffer += BeeAttemptReport(beeId, worker.getAttempt.attemptId,
         worker.getReadCount,
         worker.getWriteCount,
         worker.getBufferSize,
@@ -104,36 +204,47 @@ class Bee(conf:Configuration) extends Logging {
         worker.getError,
         worker.getAttempt.status)
     }
-    driver ! StatusUpdate(beeId,buffer.toArray)
+    master ! StatusUpdate(beeId, buffer.toArray)
+  }
+
+  @volatile var heartbeat = false
+  var heartBeatThread: Thread = null
+
+  def stopDriverHeaertbeater(): Unit = {
+    heartbeat = false
+    heartBeatThread.interrupt
   }
 
   /*
   周期性的向queen汇报自己的情况
    */
   def startDriverHeartbeater() {
-    val interval = Constants.BEE_HEATBEATER_INTERVAL
-    val t = new Thread() {
+    heartbeat = true
+    val interval = Constants.BEE_HEARTBEATER_INTERVAL
+    heartBeatThread = new Thread() {
       override def run() {
-        while (true) {
+        while (heartbeat) {
           try {
-            updateStatus()
             Thread.sleep(interval)
-          }catch{
-            case e : Throwable=> logInfo("heartbeat erro",e)
+            updateStatus()
+          } catch {
+            case e: Throwable => logInfo("heartbeat error", e)
           }
-          }
+        }
       }
     }
-    t.setDaemon(true)
-    t.setName("Queue Heartbeater")
-    t.start()
+    heartBeatThread.setDaemon(true)
+    heartBeatThread.setName("Queue Heartbeater")
+    heartBeatThread.start()
 
   }
-  def run(): Unit ={
+
+  def run(): Unit = {
     val (actorSystem, boundPort) = AkkaUtils.createActorSystem(Constants.BEE_NAME, beeHost, beePort)
     actorSystem.actorOf(
       Props(new BeeActor),
       name = Constants.BEE_NAME)
+    Bee.printBee()
     actorSystem.awaitTermination()
   }
 }
@@ -145,5 +256,23 @@ object Bee extends Logging {
     new Bee(conf).run()
   }
 
+  def printBee(): Unit = {
+    logInfo(
+      """
+        |
+        |                 \     /
+        |             \    o ^ o    /
+        |               \ (     ) /
+        |    ____________(%%%%%%%)____________
+        |   (     /   /  )%%%%%%%(  \   \     )
+        |   (___/___/__/           \__\___\___)
+        |      (     /  /(%%%%%%%)\  \     )
+        |       (__/___/ (%%%%%%%) \___\__)
+        |               /(       )\
+        |             /   (%%%%%)   \
+        |                  (%%%)
+        |                    !
+      """.stripMargin)
+  }
 
 }

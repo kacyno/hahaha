@@ -28,6 +28,8 @@ object ClientMessages {
                        @BeanProperty user:String,
                        @BeanProperty var jobName:String,
                        @BeanProperty var targetDir: String) extends ClientMessage
+  case object RegisterClient extends ClientMessage
+  case class RegisteredClient(queenUrl:String) extends ClientMessage
   case class KillJob(jobId:String) extends ClientMessage
   case class SubmitResult(jobId: String) extends ClientMessage
   case class KillJobResult(message:String) extends ClientMessage

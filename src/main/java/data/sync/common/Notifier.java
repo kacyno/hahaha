@@ -64,7 +64,7 @@ public class Notifier {
                 HttpUtil.execute(message.message,message.params);
                 break;
             } catch (Exception e) {
-                LOG.error("Message send error :" + i, e);
+                LOG.warn("Message send error :" + i+" ,"+e.getMessage());
             }
         }
     }

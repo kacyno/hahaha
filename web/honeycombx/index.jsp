@@ -1,8 +1,13 @@
+<%@ page import="data.sync.core.Queen" %>
+<%@ page import="data.sync.common.Constants" %>
+<%@ page import="data.sync.core.Queen$" %>
+<%@ page language="java" contentType="text/html; charset=utf-8"
+         pageEncoding="utf-8" %>
 <!DOCTYPE html>
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title>Honeycombx数据同步系统</title>
+    <title>Honeycombx-<%=Queen.state()%></title>
 
     <link rel="stylesheet" href="http://apps.bdimg.com/libs/bootstrap/3.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/self.css">
@@ -43,7 +48,6 @@
                     Bee信息
                 </a>
             </li>
-
         </ul>
     </div>
 </nav>
@@ -97,7 +101,7 @@
 
     </div>
     <div class="tab-pane fade in active" id="job">
-        <h3>当前Job信息</h3>
+        <h3>当前Job信息(状态:<%=Queen.state()%>)</h3>
         <table data-toggle="table"
                data-url="/rest/job/alljobs"
                data-page-size="10"

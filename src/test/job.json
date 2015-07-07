@@ -6,7 +6,7 @@
       "ip": "localhost",
       "port": "3306",
       "pwd": "lkmlnfqp",
-      "sql": "select abc from %s ",
+      "sql": "select * from %s ",
       "tables": ["import_cps_confirm_1"],
       "user": "root"
     }

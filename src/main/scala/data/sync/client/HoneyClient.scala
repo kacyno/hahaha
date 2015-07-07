@@ -1,31 +1,24 @@
 package data.sync.client
 
-import akka.util.Timeout._
-import akka.actor.ActorSystem
+import akka.remote.{AssociationErrorEvent, DisassociatedEvent, RemotingLifecycleEvent}
+import akka.actor._
 import com.typesafe.config.ConfigFactory
 import data.sync.common.ClientMessages._
-import data.sync.common.{NetUtil, AkkaUtils, Constants, Configuration}
+import data.sync.common._
 import net.sf.json.JSONObject
 import org.apache.commons.lang.StringUtils
 import scala.collection.JavaConversions._
 import scala.concurrent.Await
-import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.io.Source
+import scala.concurrent.duration._
 
 /**
  * Created by hesiyuan on 15/6/19.
  */
-object HoneyClient {
+class HoneyClient extends Logging {
+
   val conf = new Configuration()
   conf.addResource(Constants.CONFIGFILE_NAME)
-  var confPath:String = null
-  var outputPath:String = null
-  var taskNum:Int = 2
-  var isSubmit:Boolean = false
-  var isKill:Boolean = false
-  var jobId:String = null
-  var jobName:String = null
-  var user = System.getProperties.getProperty("user.name")+"@"+NetUtil.getHostname
   val akkaConf = ConfigFactory.parseMap(scala.collection.mutable.Map[String, String]())
     .withFallback(ConfigFactory.parseString(
     s"""
@@ -39,29 +32,123 @@ object HoneyClient {
        |akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 6000s
        |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
       """.stripMargin))
+  val urlPattern = "akka.tcp://%s@%s:%s/user/%s"
+  val hostAndPorts = conf.getStrings(Constants.QUEENS_HOSTPORT)
+  val masterAkkaUrls = hostAndPorts.map(e => {
+    val hp = e.split(":")
+    urlPattern.format(Constants.QUEEN_NAME, hp(0), hp(1), Constants.QUEEN_NAME)
+  })
 
 
   lazy val system = ActorSystem("Client", akkaConf)
-  val urlPattern = "akka.tcp://%s@%s:%d/user/%s"
-  val host = conf.get(Constants.QUEEN_ADDR, Constants.QUEEN_ADDR_DEFAULT)
-  val port = conf.getInt(Constants.QUEEN_PORT, Constants.QUEEN_PORT_DEFAULT)
-  val queenUrl = urlPattern.format(Constants.QUEEN_NAME, host, port, Constants.QUEEN_NAME)
-  lazy val greeter = system.actorSelection(queenUrl)
+  val actor = system.actorOf(Props(new HoneyClientActor))
+  var master: ActorSelection = null
+  while(master==null){
+    Thread.sleep(1000)
+    println("Waiting connect to Queen...")
+  }
 
-  lazy val actorRef = Await.result(greeter.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
-  def submitJobToQueen(job: SubmitJob): String = {
+  class HoneyClientActor extends Actor with ActorLogReceive with Logging{
+    override def receiveWithLogging = {
+      case RegisteredClient(masterUrl) =>
+        registered = true
+        changeMaster(masterUrl)
+      case DisassociatedEvent(_, address, _) =>
+        logWarning(s"Connection to $address failed; waiting for queen to reconnect...")
+      case AssociationErrorEvent(cause, _, address, _, _) if isPossibleMaster(address) =>
+        logWarning(s"Could not connect to $address: $cause")
+    }
+    def tryRegisterAllMasters() {
+      for (masterAkkaUrl <- masterAkkaUrls) {
+        logInfo("Connecting to queen " + masterAkkaUrl + "...")
+        val actor = context.actorSelection(masterAkkaUrl)
+        actor ! RegisterClient
+      }
+    }
+
+    def registerWithMaster() {
+      tryRegisterAllMasters()
+      import context.dispatcher
+      var retries = 0
+      registrationRetryTimer = Some {
+        context.system.scheduler.schedule(REGISTRATION_TIMEOUT, 2.seconds) {
+          retries += 1
+          if (registered) {
+            registrationRetryTimer.foreach(_.cancel())
+          } else if (retries >= REGISTRATION_RETRIES) {
+            logInfo("All queens are unresponsive! Giving up.")
+            System.exit(1)
+          } else {
+            tryRegisterAllMasters()
+          }
+        }
+      }
+    }
+
+    def changeMaster(url: String) {
+      activeMasterUrl = url
+      master = context.actorSelection(url)
+    }
+
+    private def isPossibleMaster(remoteUrl: Address) = {
+      masterAkkaUrls.map(AddressFromURIString(_).hostPort).contains(remoteUrl.hostPort)
+    }
+
+    override def postStop() {
+      registrationRetryTimer.foreach(_.cancel())
+    }
+
+    override def preStart() {
+      context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
+      try {
+        registerWithMaster()
+      } catch {
+        case e: Exception =>
+          logWarning("Failed to connect to master", e)
+          context.stop(self)
+      }
+    }
+
+    val REGISTRATION_TIMEOUT = 0.seconds
+    val REGISTRATION_RETRIES = 3
+    var registered = false
+    var activeMasterUrl: String = null
+    var registrationRetryTimer: Option[Cancellable] = None
+  }
+
+
+
+  def submitJobToQueen(job: SubmitJob):String= {
+    val actorRef = Await.result(master.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
     AkkaUtils.askWithReply[SubmitResult](job, actorRef, Duration.create(5, "seconds")).toString
   }
-  def killJob(kill:KillJob):String={
-    AkkaUtils.askWithReply[KillJobResult](kill, actorRef, Duration.create(50, "seconds")).toString
+
+  def killJob(kill: KillJob):String= {
+    val actorRef = Await.result(master.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
+    AkkaUtils.askWithReply[KillJobResult](kill, actorRef, Duration.create(5, "seconds")).toString
   }
+
+
+}
+
+
+object HoneyClient {
+  var outputPath: String = null
+  var taskNum: Int = 2
+  var isSubmit: Boolean = false
+  var isKill: Boolean = false
+  var jobId: String = null
+  var jobName: String = null
+  var confPath: String = null
+  var user = System.getProperties.getProperty("user.name") + "@" + NetUtil.getHostname
+
   def main(args: Array[String]) {
-    if (args.length ==0)
+    if (args.length == 0)
       printUsageAndExit(1)
     else {
       parseOpts(args.toList)
-      if(isSubmit) {
-        if(StringUtils.isEmpty(confPath)) {
+      if (isSubmit) {
+        if (StringUtils.isEmpty(confPath)) {
           println("miss job-conf-path [-conf]")
           System.exit(1)
         }
@@ -69,96 +156,37 @@ object HoneyClient {
         val desc = source.mkString
         //      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
         val submitJob = parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))
-        if(taskNum>0)
-          submitJob.taskNum=taskNum
-        if(StringUtils.isNotEmpty(outputPath))
-          submitJob.targetDir=outputPath
-        if(StringUtils.isNotEmpty(jobName))
+        if (taskNum > 0)
+          submitJob.taskNum = taskNum
+        if (StringUtils.isNotEmpty(outputPath))
+          submitJob.targetDir = outputPath
+        if (StringUtils.isNotEmpty(jobName))
           submitJob.jobName = jobName
-        if(StringUtils.isEmpty(submitJob.targetDir)) {
+        if (StringUtils.isEmpty(submitJob.targetDir)) {
           println("miss job-output-path [-output]")
           System.exit(1)
         }
-        if(StringUtils.isEmpty(submitJob.jobName)) {
+        if (StringUtils.isEmpty(submitJob.jobName)) {
           println("miss job-name [-name]")
           System.exit(1)
         }
-        println(submitJobToQueen(submitJob))
+        println(new HoneyClient().submitJobToQueen(submitJob))
       }
-      if(isKill){
-        if(StringUtils.isEmpty(jobId)){
+      if (isKill) {
+        if (StringUtils.isEmpty(jobId)) {
           printUsageAndExit(1)
         }
-        println(killJob(KillJob(jobId)))
+        println(new HoneyClient().killJob(KillJob(jobId)))
       }
     }
-    system.shutdown()
+
   }
 
-
-  def parseJSONObjectToSubmitJob(json:JSONObject):SubmitJob={
-    SubmitJob(json.getInt("priority"),json.getJSONArray("dbinfos").map(e=>{
-      val jobj = e.asInstanceOf[JSONObject]
-      val tables = jobj.getJSONArray("tables").map(_.asInstanceOf[String]).toArray
-      DBInfo(jobj.getString("sql"),
-        jobj.getString("indexFiled"),
-        tables,jobj.getString("db"),
-        jobj.getString("ip"),
-        jobj.getString("port"),
-        jobj.getString("user"),
-        jobj.getString("pwd"))
-    }
-    ).toArray,json.getInt("taskNum"),json.getString("callbackCMD"),json.getString("notifyUrl"),user,json.getString("jobName"),json.getString("targetDir"))
-  }
-  private def parseOpts(opts: Seq[String]): Unit = {
-    parse(opts)
-    def parse(opts: Seq[String]): Unit = opts match {
-      case ("-submit")  :: tail =>
-        isSubmit=true
-        if(isKill){
-          printConflictInfo
-        }
-        parse(tail)
-
-      case ("--conf") :: value :: tail =>
-        confPath = value
-        isSubmit=true
-        parse(tail)
-      case ("--name") :: value :: tail =>
-        jobName = value
-        parse(tail)
-
-      case ("--output") :: value :: tail =>
-        outputPath = value
-        parse(tail)
-
-      case ("--number") :: value :: tail =>
-         taskNum = value.toInt
-        parse(tail)
-      case ("-kill") :: value :: tail =>
-        isKill = true
-        jobId = value
-        if (isSubmit) {
-          printConflictInfo
-        }
-        parse(tail)
-
-      case ("--help" | "-h") :: tail =>
-        printUsageAndExit(1)
-
-      case value :: tail if value.startsWith("-") =>
-        printUsageAndExit(1,value)
-
-      case value :: tail =>
-        printUsageAndExit(1)
-
-      case Nil =>
-    }
-  }
-  private def printConflictInfo(): Unit ={
+  private def printConflictInfo(): Unit = {
     println("Action cannot be both Submit and Kill.")
   }
-  private def printUsageAndExit(exitCode: Int,unknownParam: Any = null): Unit = {
+
+  private def printUsageAndExit(exitCode: Int, unknownParam: Any = null): Unit = {
     if (unknownParam != null) {
       println("Unknown/unsupported param " + unknownParam)
     }
@@ -178,4 +206,66 @@ object HoneyClient {
     )
     System.exit(exitCode)
   }
+
+  def parseJSONObjectToSubmitJob(json: JSONObject): SubmitJob = {
+    SubmitJob(json.getInt("priority"), json.getJSONArray("dbinfos").map(e => {
+      val jobj = e.asInstanceOf[JSONObject]
+      val tables = jobj.getJSONArray("tables").map(_.asInstanceOf[String]).toArray
+      DBInfo(jobj.getString("sql"),
+        jobj.getString("indexFiled"),
+        tables, jobj.getString("db"),
+        jobj.getString("ip"),
+        jobj.getString("port"),
+        jobj.getString("user"),
+        jobj.getString("pwd"))
+    }
+    ).toArray, json.getInt("taskNum"), json.getString("callbackCMD"), json.getString("notifyUrl"), user, json.getString("jobName"), json.getString("targetDir"))
+  }
+
+  private def parseOpts(opts: Seq[String]): Unit = {
+    parse(opts)
+    def parse(opts: Seq[String]): Unit = opts match {
+      case ("-submit") :: tail =>
+        isSubmit = true
+        if (isKill) {
+          printConflictInfo
+        }
+        parse(tail)
+
+      case ("--conf") :: value :: tail =>
+        confPath = value
+        isSubmit = true
+        parse(tail)
+      case ("--name") :: value :: tail =>
+        jobName = value
+        parse(tail)
+
+      case ("--output") :: value :: tail =>
+        outputPath = value
+        parse(tail)
+
+      case ("--number") :: value :: tail =>
+        taskNum = value.toInt
+        parse(tail)
+      case ("-kill") :: value :: tail =>
+        isKill = true
+        jobId = value
+        if (isSubmit) {
+          printConflictInfo
+        }
+        parse(tail)
+
+      case ("--help" | "-h") :: tail =>
+        printUsageAndExit(1)
+
+      case value :: tail if value.startsWith("-") =>
+        printUsageAndExit(1, value)
+
+      case value :: tail =>
+        printUsageAndExit(1)
+
+      case Nil =>
+    }
+  }
+
 }

@@ -10,7 +10,7 @@ import org.junit.Test;
 public class ClientTest {
     @Test
     public void test1() {
-        System.out.println((HoneyClient.killJob(new ClientMessages.KillJob("job_30aee700-bfd2-45fc-81e6-7d367db0c219"))));
+        new HoneyClient().killJob(new ClientMessages.KillJob("job_30aee700-bfd2-45fc-81e6-7d367db0c219"));
     }
 
     @Test

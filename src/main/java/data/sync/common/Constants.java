@@ -32,7 +32,7 @@ public interface Constants {
     int BEE_WORKER_NUM_DEFAULT = 10;
 
     int QUEEN_CHECKER_INTERVAL= 10*1000;
-    int BEE_HEATBEATER_INTERVAL = 2*1000;
+    int BEE_HEARTBEATER_INTERVAL = 2*1000;
     int TASK_TIMEOUT = 1*60*1000;
 
     String HISTORY_DIR = "history.dir";
@@ -41,5 +41,20 @@ public interface Constants {
     String FETCHER_CLASSNAME = "fetcher.classname";
 
     String SINKER_CLASSNAME = "sinker.classname";
+
+    String ZK_URL ="zookeeper.url";
+
+    String QUEEN_ZK_WORK_DIR = "queen.zk.workDir";
+    String QUEEN_ZK_WORK_DIR_DEFAULT = "/honey";
+
+    String QUEEN_RECOVERY_DIR = "queen.recovery.dir";
+    String QUEEN_RECOVERY_DIR_DEFAULT="./recovery";
+
+    String QUEENS_HOSTPORT = "queens.hostport";
+
+    String RECOVERY_MODE = "recovery.mode"; //NONE,ZOOKEEPER,FILESYSTEM,CUSTOM
+    String RECOVERY_MODE_DEFAULT = "FILESYSTEM";
+
+    String CUSTOM_RECOVERY_FACTORY="custom.recovery.factory";
 
 }

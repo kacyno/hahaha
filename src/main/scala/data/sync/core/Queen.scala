@@ -3,26 +3,67 @@ package data.sync.core
 import java.util.Date
 import akka.actor.{ActorRef, Props, Actor}
 import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
-import data.sync.common.ClientMessages.{KillJobResult, SubmitResult, DBInfo, SubmitJob}
+import akka.serialization.{Serialization, SerializationExtension}
+import data.sync.common.ClientMessages._
+import data.sync.common.MasterMessages.{CompleteRecovery, RevokedLeadership, ElectedLeader}
 import data.sync.common._
 import data.sync.common.ClusterMessages._
 import data.sync.common.Logging
+import data.sync.core.ha._
 import data.sync.http.server.HttpServer
 import net.sf.json.JSONObject
 
 /**
  * Created by hesiyuan on 15/6/19.
  */
-class Queen extends Actor with ActorLogReceive with Logging {
+class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogReceive with Logging with LeaderElectable{
+
+
+
+  var persistenceEngine: PersistenceEngine = _
+  val RECOVERY_MODE = conf.get(Constants.RECOVERY_MODE, Constants.RECOVERY_MODE_DEFAULT)
+  var leaderElectionAgent: LeaderElectionAgent = _
   override def preStart() {
     context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
+    val (persistenceEngine_, leaderElectionAgent_) = RECOVERY_MODE match {
+      case "ZOOKEEPER" =>
+        logInfo("Persisting recovery state to ZooKeeper")
+        val zkFactory =
+          new ZooKeeperRecoveryModeFactory(conf, SerializationExtension(context.system))
+        (zkFactory.createPersistenceEngine(), zkFactory.createLeaderElectionAgent(this))
+      case "FILESYSTEM" =>
+        val fsFactory =
+          new FileSystemRecoveryModeFactory(conf, SerializationExtension(context.system))
+        (fsFactory.createPersistenceEngine(), fsFactory.createLeaderElectionAgent(this))
+      case "CUSTOM" =>
+        val clazz = Class.forName(conf.get(Constants.CUSTOM_RECOVERY_FACTORY))
+        val factory = clazz.getConstructor(conf.getClass, Serialization.getClass)
+          .newInstance(conf, SerializationExtension(context.system))
+          .asInstanceOf[StandaloneRecoveryModeFactory]
+        (factory.createPersistenceEngine(), factory.createLeaderElectionAgent(this))
+      case _ =>
+        (new BlackHolePersistenceEngine(), new MonarchyLeaderAgent(this))
+    }
+    persistenceEngine = persistenceEngine_
+    leaderElectionAgent = leaderElectionAgent_
+    JobManager.init(persistenceEngine)
   }
 
   override def receiveWithLogging = {
     case RegisterBee(cores) =>
-      val beeId = registerBee(cores, sender)
-      sender ! ClusterMessages.RegisteredBee(beeId)
-      assignTask()
+      if (Queen.state == RecoveryState.STANDBY) {
+        // ignore, don't send response
+      }else {
+        val beeId = registerBee(cores, sender)
+        sender ! ClusterMessages.RegisteredBee(queenUrl,beeId)
+        assignTask()
+      }
+    case RegisterClient =>
+      if (Queen.state == RecoveryState.STANDBY) {
+        // ignore, don't send response
+      }else {
+        sender ! RegisteredClient(queenUrl)
+      }
     case job @ SubmitJob(priority, dbinfos, taskNum, cmd,url,user,jobName,targetDir) =>
       logInfo(
         """
@@ -31,7 +72,9 @@ class Queen extends Actor with ActorLogReceive with Logging {
           |%s
         """.stripMargin.format(sender.path.address,JSONObject.fromObject(job).toString()))
       try {
-        val jobId = submitJob(priority, dbinfos, taskNum, targetDir, cmd, url, user, jobName)
+        val jobId = submitJob(job)
+        //保存作业，用于恢复
+        persistenceEngine.addJob(jobId,(jobId,job))
         sender ! SubmitResult(jobId)
       }catch{
         case e:Exception=>
@@ -51,8 +94,38 @@ class Queen extends Actor with ActorLogReceive with Logging {
     case x: DisassociatedEvent =>
       removeBee(x)
       logWarning(s"Received irrelevant DisassociatedEvent $x")
+
+    case ElectedLeader => {
+      val jobs = persistenceEngine.read[(String,SubmitJob)]("")
+      Queen.state = if (jobs.isEmpty ) {
+        RecoveryState.ACTIVE
+      } else {
+        RecoveryState.RECOVERING
+      }
+      logInfo("I have been elected leader! New state: " + Queen.state)
+      if (Queen.state == RecoveryState.RECOVERING) {
+        beginRecovery(jobs)
+      }
+    }
+
+    case CompleteRecovery => completeRecovery()
+
+    case RevokedLeadership => {
+      logError("Leadership has been revoked -- master shutting down.")
+      System.exit(0)
+    }
     case other =>
       logInfo(other.toString)
+  }
+  def beginRecovery(jobs:Seq[(String,SubmitJob)]): Unit ={
+    Queen.state = RecoveryState.RECOVERING
+    jobs.foreach(e=>submitJob(e._2,e._1))
+    self ! CompleteRecovery
+  }
+  def completeRecovery(): Unit = {
+    Queen.state = RecoveryState.COMPLETING_RECOVERY
+    //nothing to do
+    Queen.state = RecoveryState.ACTIVE
   }
 
   /*
@@ -108,24 +181,26 @@ class Queen extends Actor with ActorLogReceive with Logging {
   /*
    *将作业拆分成多个TaskDesc,并封装在Job中放入队列
    */
-  def submitJob(priority: Int, dbinfos: Array[DBInfo], num: Int, dir: String,cmd:String,url:String,user:String,jobName:String): String = {
-    val jobId = IDGenerator.generatorJobId();
-    val tasks = SimpleSplitter.split(jobId, dbinfos, num, dir)
+  def submitJob(submit:SubmitJob,jd:String=null):String={
+    var jobId = jd
+    if(jd==null)
+      jobId = IDGenerator.generatorJobId();
+    val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir)
     val job = JobInfo(jobId,
-      dbinfos,
-      priority,
+      submit.dbinfos,
+      submit.priority,
       new Date().getTime,
       0l,
-      dir,
-      dbinfos,
+      submit.targetDir,
+      submit.dbinfos,
       tasks,
       new java.util.HashSet[TaskInfo](),
       new java.util.HashSet[TaskInfo](),
       new java.util.HashSet[TaskInfo](),
-      cmd,
-      url,
-      user,
-      jobName,
+      submit.callbackCMD,
+      submit.url,
+      submit.user,
+      submit.jobName,
       JobStatus.SUBMITED
     )
     JobManager.addJob(job)
@@ -179,23 +254,33 @@ class Queen extends Actor with ActorLogReceive with Logging {
   }
 
   startChecker
+
+  override def electedLeader() {
+    self ! ElectedLeader
+  }
+
+  override def revokedLeadership() {
+    self ! RevokedLeadership
+  }
 }
 
 
 object Queen extends Logging {
-
+  var state = RecoveryState.STANDBY
+  var conf = new Configuration()
+  conf.addResource(Constants.CONFIGFILE_NAME)
   private def run(conf: Configuration) {
     val (actorSystem, boundPort) = AkkaUtils.createActorSystem(Constants.QUEEN_NAME, conf.get(Constants.QUEEN_ADDR), conf.getInt(Constants.QUEEN_PORT, Constants.QUEEN_PORT_DEFAULT))
+    val queenUrl = "akka.tcp://%s@%s:%d/user/%s".format(Constants.QUEEN_NAME,conf.get(Constants.QUEEN_ADDR),boundPort,Constants.QUEEN_NAME)
     actorSystem.actorOf(
-      Props(classOf[Queen]),
+      Props(classOf[Queen],conf,queenUrl),
       name = Constants.QUEEN_NAME)
+    Bee.printBee()
     actorSystem.awaitTermination()
 
   }
 
   def main(args: Array[String]) {
-    val conf = new Configuration
-    conf.addResource(Constants.CONFIGFILE_NAME)
     val httpServer = new HttpServer(conf)
     httpServer.start()
     JobHistory.init()

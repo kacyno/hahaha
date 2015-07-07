@@ -23,8 +23,7 @@ Bee:
 
 
 PS:
-#1.一期不考虑Queen的HA,Bee与Queen在可容认的失联时间外需要停止自己的全部任务，并开始定时与queen重新建立通信
 
-#2.通信使用akka框架
+#1.通信使用akka框架
 
-#3.开发语言为Java+Scala
+#2.开发语言为Java+Scala

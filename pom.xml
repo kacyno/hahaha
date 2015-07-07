@@ -140,7 +140,11 @@
             <artifactId>jsp-2.1-glassfish</artifactId>
             <version>9.1.1.B60.25.p2</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>2.4.0</version>
+        </dependency>
         <dependency>
             <groupId>net.sf.json-lib</groupId>
             <artifactId>json-lib</artifactId>
@@ -158,15 +162,15 @@
             <version>3.0.1</version>
         </dependency>
         <!--<dependency>-->
-            <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
-            <!--<artifactId>jersey-gf-bundle</artifactId>-->
-            <!--<version>1.0.3</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<artifactId>jackson-asl</artifactId>-->
-                    <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
+        <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
+        <!--<artifactId>jersey-gf-bundle</artifactId>-->
+        <!--<version>1.0.3</version>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<artifactId>jackson-asl</artifactId>-->
+        <!--<groupId>com.sun.jersey.glassfish.v3.osgi</groupId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
         <!--</dependency>-->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -225,8 +229,6 @@
             </exclusions>
         </dependency>
     </dependencies>
-
-
 
 
     <build>
@@ -296,7 +298,8 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/lib</outputDirectory>
+                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/lib
+                            </outputDirectory>
                             <overWriteReleases>false</overWriteReleases>
                             <overWriteSnapshots>false</overWriteSnapshots>
                             <overWriteIfNewer>true</overWriteIfNewer>
@@ -318,7 +321,8 @@
                         </goals>
                         <configuration>
                             <encoding>UTF-8</encoding>
-                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/lib</outputDirectory>
+                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/lib
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>./target/</directory>
@@ -337,7 +341,8 @@
                         </goals>
                         <configuration>
                             <encoding>UTF-8</encoding>
-                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/conf</outputDirectory>
+                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/conf
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${basedir}/conf</directory>
@@ -354,7 +359,8 @@
                         </goals>
                         <configuration>
                             <encoding>UTF-8</encoding>
-                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/bin</outputDirectory>
+                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/bin
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${basedir}/bin</directory>
@@ -371,7 +377,8 @@
                         </goals>
                         <configuration>
                             <encoding>UTF-8</encoding>
-                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/web</outputDirectory>
+                            <outputDirectory>${project.build.directory}/honeycomb-${project.version}/web
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>${basedir}/web</directory>

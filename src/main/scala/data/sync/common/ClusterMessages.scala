@@ -133,7 +133,7 @@ object ClusterMessages {
   //Bee注册时使用，要声明自己有多少worker
   case class RegisterBee(workerNum: Int) extends ClusterMessage
   //注册后Queen的返回
-  case class RegisteredBee(beeId: String) extends ClusterMessage
+  case class RegisteredBee(queenUrl:String,beeId: String) extends ClusterMessage
   //状态更新
   case class StatusUpdate(beeId: String, reports: Array[BeeAttemptReport]) extends ClusterMessage
   //杀死job
@@ -142,5 +142,6 @@ object ClusterMessages {
   case class StopAttempt(attemptId: String) extends ClusterMessage
   //bee相关信息描述
   case class BeeDesc(@BeanProperty var runningWorker: Int, @BeanProperty var totalWorker: Int, @BeanProperty beeId: String, sender: ActorRef)
-
+  case object ReregisterWithMaster extends ClusterMessage
+  case class MasterChanged(masterUrl: String) extends ClusterMessage
 }

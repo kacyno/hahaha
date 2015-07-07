@@ -1,12 +1,18 @@
 <configuration>
     <property>
+        <name>queens.hostport</name>
+        <value>localhost:43935,localhost:43936</value>
+        <description>queen主机与端口，(HA)多个逗号分开</description>
+    </property>
+    <property>
         <name>http.addr</name>
-        <value>0.0.0.0</value>
+        <value>localhost</value>
         <description>http监听ip</description>
     </property>
     <property>
         <name>http.port</name>
-        <value>43933</value>
+        <!--<value>43933</value>-->
+        <value>43937</value>
         <description>http端口</description>
     </property>
     <property>
@@ -16,32 +22,53 @@
     </property>
     <property>
         <name>queen.port</name>
-        <value>43935</value>
-        <description></description>
+        <!--<value>43935</value>-->
+        <value>43936</value>
+        <description>queen akka使用端口</description>
     </property>
     <property>
         <name>queen.addr</name>
-        <value>0.0.0.0</value>
-        <description></description>
+        <value>localhost</value>
+        <description>queen akka监听地址</description>
     </property>
     <property>
         <name>bee.port</name>
         <value>43933</value>
-        <description></description>
+        <description>bee akka端口</description>
     </property>
     <property>
         <name>bee.addr</name>
-        <value>0.0.0.0</value>
-        <description></description>
+        <value>localhost</value>
+        <description>bee akka地址</description>
     </property>
     <property>
         <name>bee.worker.num</name>
         <value>10</value>
-        <description></description>
+        <description>bee中worker数，一个worker为两个线程，即fetcher与sinker各占用一个线程</description>
     </property>
     <property>
         <name>history.dir</name>
         <value>/Users/hesiyuan/testdir/history/</value>
-        <description></description>
+        <description>queen历史目录，不同的queen该目录不共享</description>
+    </property>
+    <property>
+        <name>queen.recovery.dir</name>
+        <value>/Users/hesiyuan/testdir/recovery/</value>
+        <description>ha使用的恢复目录</description>
+    </property>
+    <property>
+        <name>recovery.mode</name>
+        <value>ZOOKEEPER</value>
+        <description>NONE,ZOOKEEPER,FILESYSTEM,CUSTOM</description>
+    </property>
+    <property>
+        <name>queen.zk.workDir</name>
+        <value>/honey</value>
+        <description>与queen.recoverty.dir配置项类似，只是将数据存到了zk上，此处即为指定zk目录</description>
+    </property>
+    <property>
+        <name>zookeeper.url</name>
+        <value>localhost:2181</value>
+        <description>zk集群地址，逗号分开</description>
     </property>
 </configuration>
