@@ -13,9 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        Properties prop = System.getProperties();
-        System.out.println(NetUtil.getHostname());
-// 获取用户名
-        System.out.println("\n当前用户名:"+prop.getProperty("user.name"));
+        System.out.println(Integer.MIN_VALUE);
     }
 }

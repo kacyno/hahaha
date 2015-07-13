@@ -65,7 +65,9 @@ public class JobHistory {
             if(attempt.length>0) {
                 for (int i = 0; i < attempt.length; i++) {
                     BeeAttemptReport report = JobManager.getReport(attempt[i].attemptId());
-                    attempts.add(new HAttempt(attempt[i].attemptId(),report.beeId(),report.readNum(),report.writeNum(),format.format(new Date(attempt[i].startTime())),format.format(new Date(attempt[i].finishTime())),report.error(),attempt[i].status(),report.bufferSize()));
+                    attempts.add(new HAttempt(attempt[i].attemptId(),report.beeId(),report.readNum(),report.writeNum(),format.format(new Date(attempt[i].startTime())),
+                            attempt[i].finishTime()==0?"--":
+                            format.format(new Date(attempt[i].finishTime())),report.error(),attempt[i].status(),report.bufferSize()));
                 }
             }
             HTask htask = HTask.generateFormTaskInfo(task);
@@ -156,13 +158,15 @@ public class JobHistory {
         private String user;
         private String jobname;
         private JobStatus status;
-
+        private long totalRead;
+        private long totalWrite;
+        private long totalStorage;
         public static HJob generateFromJobInfo(JobInfo ji){
             HJob job = new HJob();
             job.jobId = ji.jobId();
             job.priority = ji.priority();
             job.submitTime = format.format(new Date(ji.submitTime()));
-            job.finishTime = format.format(new Date(ji.finishTime()));
+            job.finishTime = ji.finishTime()==0?"--":format.format(new Date(ji.finishTime()));
             job.targetDir = ji.targetDir();
             job.jobDesc = getSimpleJobDesc(ji);
             job.status = ji.status();
@@ -171,6 +175,60 @@ public class JobHistory {
             job.user = ji.user();
             job.jobname = ji.jobName();
             return job;
+        }
+
+        public long getTotalStorage() {
+            long storage = 0;
+            for(HTask t:tasks){
+                long maxStorage = 0;
+                for(HAttempt e:t.attempts){
+                    if(e.getBufferSize()>maxStorage)
+                        maxStorage = e.getBufferSize();
+                }
+                storage+=maxStorage;
+            }
+            totalStorage = storage;
+            return totalStorage;
+        }
+
+        public void setTotalStorage(long totalStorage) {
+            this.totalStorage = totalStorage;
+        }
+
+        public long getTotalRead() {
+            long read = 0;
+            for(HTask t:tasks){
+                long maxRead = 0;
+                for(HAttempt e:t.attempts){
+                    if(e.getReadNum()>maxRead)
+                        maxRead = e.getReadNum();
+                }
+                read+=maxRead;
+            }
+            totalRead = read;
+            return totalRead;
+        }
+
+        public void setTotalRead(long totalRead) {
+            this.totalRead = totalRead;
+        }
+
+        public long getTotalWrite() {
+            long write = 0;
+            for(HTask t:tasks){
+                long maxWrite = 0;
+                for(HAttempt e:t.attempts){
+                    if(e.getWriteNum()>maxWrite)
+                        maxWrite = e.getWriteNum();
+                }
+                write+=maxWrite;
+            }
+            totalWrite = write;
+            return totalWrite;
+        }
+
+        public void setTotalWrite(long totalWrite) {
+            this.totalWrite = totalWrite;
         }
 
         public String getUser() {
@@ -297,7 +355,7 @@ public class JobHistory {
             task.targetDir = ti.targetDir();
             task.status = ti.status();
             task.startTime = format.format(new Date(ti.startTime()));
-            task.finishTime = format.format(new Date(ti.finishTime()));
+            task.finishTime =ti.finishTime()==0?"--": format.format(new Date(ti.finishTime()));
             return task;
         }
 

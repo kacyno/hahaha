@@ -8,11 +8,12 @@ package data.sync.common
 import java.net.BindException
 
 
+
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
-import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem}
+import akka.actor.{Address, ActorRef, ActorSystem, ExtendedActorSystem}
 import akka.pattern.ask
 
 import com.typesafe.config.ConfigFactory
@@ -264,6 +265,16 @@ object AkkaUtils extends Logging {
     // Should never happen
     throw new Exception(s"Failed to start service$serviceString on port $startPort")
   }
-
+  def extractAddressFromUrl(sparkUrl: String): Address = {
+    val uri = new java.net.URI(sparkUrl)
+    val scheme = uri.getScheme
+    val host = uri.getHost
+    val port = uri.getPort
+    val user = uri.getUserInfo
+    Address(scheme,user,host,port)
+  }
+  def main (args: Array[String]) {
+    println(extractAddressFromUrl("akka.tcp://queen@localhost:43935/user/queen"))
+  }
 }
 

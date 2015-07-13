@@ -65,7 +65,7 @@ public class Worker {
         sinkerE = new SinkerExecutor();
 
         storage = new RAMStorage();
-        storage.init(1000000,sinkerE,fetcherE);
+        storage.init(conf.getInt("storage.limit.size",2000),sinkerE,fetcherE);
     }
     public String getJobId(){
         return attempt.taskDesc().jobId();
@@ -96,6 +96,7 @@ public class Worker {
 
         }
         public void stop(){
+            logger.info("fetcher:"+attempt.attemptId()+" stop!");
             current.interrupt();
             fetcher.stop();
         }
@@ -118,6 +119,7 @@ public class Worker {
             }
         }
         public void stop(){
+            logger.info("sindker:"+attempt.attemptId()+" stop!");
             current.interrupt();
             sinker.stop();
         }

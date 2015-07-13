@@ -1,22 +1,20 @@
 {
   "dbinfos": [
     {
-      "db": "test",
+      "db": "ad_dianjing",
       "indexFiled": "id",
-      "ip": "localhost",
-      "port": "3306",
-      "pwd": "lkmlnfqp",
-      "sql": "select * from %s ",
-      "tables": ["import_cps_confirm_1"],
-      "user": "root"
+      "ip": "140.207.198.21",
+      "port": "3301",
+      "pwd": "abFdJQ96YTKQx27n",
+      "sql": "select id,kid,ad_group_id,ad_user_id,replace(replace(keyword, '\n', ''), '\r', ''),match_type,key_price,create_time,update_time,replace(replace(key_url, '\n', ''), '\r', ''),replace(replace(cause, '\n', ''), '\r', ''),sensitive_tag,status,wildcard_tag,audit_status,m_audit_status from %s",
+      "tables": ["ad_search_keywords"],
+      "user": "ad_ba"
     }
   ],
   "priority": 1,
-  "callbackCMD": "/Users/hesiyuan/testdir/bin/test.sh aa",
-  "notifyUrl": "http://localhost:8044/supervisor/honey",
-  "jobName" : "test-job",
-  "targetDir": "/Users/hesiyuan/testdir/data/",
-  "taskNum": 4
+  "callbackCMD": "",
+  "notifyUrl": "",
+  "jobName" : "ad_search_keywords",
+  "targetDir": "/home/hdp-guanggao/hesiyuan/ad_search_keywords/",
+  "taskNum": 300
 }
-
-

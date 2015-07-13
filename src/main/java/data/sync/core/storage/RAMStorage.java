@@ -34,7 +34,11 @@ public class RAMStorage extends Storage {
 	public boolean push(Line line) {
 		if (isPushClosed())
 			return false;
-		mars.offer(line);
+		try {
+			mars.put(line);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		return true;
 	}
 
@@ -48,13 +52,17 @@ public class RAMStorage extends Storage {
 	@Override
 	public Line pull() {
 		Line line = null;
-		try {
-			line = mars.take();
-		} catch (InterruptedException e) {
-            log.info("push is closed,no more element to take!");
-			return null;
-		}
-		return line;
+        while(true) {
+            try {
+                line = mars.poll(1, TimeUnit.SECONDS);
+                if (line == null && isPushClosed())
+                    return mars.poll();
+                else if (line != null)
+                    return line;
+            } catch (InterruptedException e) {
+                return null;
+            }
+        }
 	}
 
 	@Override

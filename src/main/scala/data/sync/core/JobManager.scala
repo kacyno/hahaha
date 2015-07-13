@@ -5,19 +5,16 @@ import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 
 import data.sync.common.ClusterMessages._
-import data.sync.common.{Logging, Constants}
+import data.sync.common.{HdfsUtil, Logging, Constants}
 import data.sync.core.ha.PersistenceEngine
-import net.sf.json.{JSONObject, JSONArray}
 import org.apache.commons.lang.{ArrayUtils, StringUtils}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.fs.Path
 import org.apache.hadoop.util.Shell
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-
 object JobManager extends Logging {
-  val fs = FileSystem.get(new Configuration())
+  val hdfs:HdfsUtil =HdfsUtil.getHdfsUtil()
   val MAX_ATTEMPT = 3
   //taskAttemptId到taskAttempt的映射
   private val taskAttemptDic = new ConcurrentHashMap[String, TaskAttemptInfo]
@@ -33,7 +30,6 @@ object JobManager extends Logging {
   private val attempt2report = new ConcurrentHashMap[String, BeeAttemptReport]
 
   private var persist:PersistenceEngine=null
-
   def init(persist:PersistenceEngine): Unit ={
     this.persist = persist
   }
@@ -214,15 +210,23 @@ object JobManager extends Logging {
     logInfo(jobId + " commit to " + status)
     val job = jobDic(jobId)
     job.finished(status)
+    FIFOScheduler.delJob(job)
     if (job.status == JobStatus.FINISHED) {
-      for (task <- job.finishedTasks) {
-        for (atpId <- taskDic(task.taskId) if (taskAttemptDic(atpId.attemptId).status == TaskAttemptStatus.FINISHED)) {
-          fs.rename(new Path(job.targetDir + "tmp/" + atpId.attemptId), new Path(job.targetDir + atpId.attemptId))
+      try {
+        for (task <- job.finishedTasks) {
+          for (atpId <- taskDic(task.taskId) if (taskAttemptDic(atpId.attemptId).status == TaskAttemptStatus.FINISHED)) {
+            hdfs.rename(new Path(job.targetDir + "tmp/" + atpId.attemptId), new Path(job.targetDir + atpId.attemptId))
+          }
+        }
+        hdfs.delete(new Path(job.targetDir + "tmp/")) //失败的任务可能在删文件时还在操作，只删成功的
+        hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
+      }catch{
+        //IO操作，当报错时捕获，不影响其它后续操作
+        case e:Throwable=>{
+          log.error("commit error!",e)
+          job.finished(JobStatus.FAILED)
         }
       }
-      FIFOScheduler.delJob(job)
-      fs.delete(new Path(job.targetDir + "tmp/"), true) //失败的任务可能在删文件时还在操作，只删成功的
-      fs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
       //如果作业有配置回调命，执行
       if (StringUtils.isNotEmpty(job.callbackCMD)) {
         val command = job.callbackCMD.split(" ")
@@ -258,7 +262,6 @@ object JobManager extends Logging {
   def killJob(jobId: String, status: JobStatus = JobStatus.FAILED): Unit = synchronized {
     logInfo(jobId + " is killed by " + status)
     val job = jobDic(jobId)
-    FIFOScheduler.delJob(job)
     for (task <- (job.runningTasks ++ job.appendTasks)) {
       if (taskDic.containsKey(task.taskId)) {
         for (apt <- taskDic(task.taskId)) {
@@ -281,12 +284,15 @@ object JobManager extends Logging {
   /*
    * 清理job相关数据,并将其保存在文件中
    */
-  def clearJob(jobId: String): Unit = {
-    //将历史保存
-    JobHistory.addJobToHistory(jobId)
-    //将job备份清除
-    persist.removeJob(jobId)
-
+  private def  clearJob(jobId: String): Unit = {
+    try {
+      //将历史保存
+      JobHistory.addJobToHistory(jobId)
+      //将job备份清除
+      persist.removeJob(jobId)
+    }catch{
+      case e:Throwable=>log.error("clear error!",e)
+    }
     //清理数据
     val job = jobDic(jobId)
 

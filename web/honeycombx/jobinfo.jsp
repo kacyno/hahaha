@@ -19,9 +19,9 @@
     <script src="bootstrap-table/locale/bootstrap-table-zh-CN.js"></script>
     <script src="js/bootstrap-dialog.js"></script>
     <script>
-
+        <% JobHistory.HJob job = JobHistory.getMemHjob(request.getParameter("jobid")); %>
         var jobData = <%=
-            JSONObject.fromObject(JobHistory.getMemHjob(request.getParameter("jobid"))).toString()
+            JSONObject.fromObject(job).toString()
         %>
                 $(function () {
                     $('#table').bootstrapTable({
@@ -51,7 +51,7 @@
         }
     </script>
 </head>
-<h3>&nbsp&nbsp<span class="label label-default"><%=request.getParameter("jobid")%></span></h3>
+<h3>&nbsp&nbsp<span class="label label-default"><%=job.getJobId()+"&nbsp&nbsp(read:"+job.getTotalRead()+",write:"+job.getTotalWrite()+",buffer:"+job.getTotalStorage()+")"%></span></h3>
 <table
         data-page-size="10"
         data-pagination="true"

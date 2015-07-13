@@ -20,7 +20,11 @@ trait ActorLogReceive {
         log.debug(s"[actor] received message $o from ${self.sender}")
       }
       val start = System.nanoTime
-      _receiveWithLogging.apply(o)
+      try {
+        _receiveWithLogging.apply(o)
+      }catch{
+        case e:Throwable=>log.error("actor error",e)
+      }
       val timeTaken = (System.nanoTime - start).toDouble / 1000000
       if (log.isDebugEnabled) {
         log.debug(s"[actor] handled message ($timeTaken ms) $o from ${self.sender}")

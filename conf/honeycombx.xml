@@ -1,7 +1,8 @@
 <configuration>
     <property>
         <name>queens.hostport</name>
-        <value>localhost:43935,localhost:43936</value>
+        <!--<value>localhost:43935,localhost:43936</value>-->
+        <value>182.118.25.95:43935</value>
         <description>queen主机与端口，(HA)多个逗号分开</description>
     </property>
     <property>
@@ -11,8 +12,8 @@
     </property>
     <property>
         <name>http.port</name>
-        <!--<value>43933</value>-->
-        <value>43937</value>
+        <value>43933</value>
+        <!--<value>43937</value>-->
         <description>http端口</description>
     </property>
     <property>
@@ -22,8 +23,8 @@
     </property>
     <property>
         <name>queen.port</name>
-        <!--<value>43935</value>-->
-        <value>43936</value>
+        <value>43935</value>
+        <!--<value>43936</value>-->
         <description>queen akka使用端口</description>
     </property>
     <property>
@@ -58,7 +59,7 @@
     </property>
     <property>
         <name>recovery.mode</name>
-        <value>ZOOKEEPER</value>
+        <value>FILESYSTEM</value>
         <description>NONE,ZOOKEEPER,FILESYSTEM,CUSTOM</description>
     </property>
     <property>

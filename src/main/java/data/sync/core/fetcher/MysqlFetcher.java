@@ -1,8 +1,6 @@
 package data.sync.core.fetcher;
 
-import data.sync.common.ClusterMessages;
-import data.sync.common.DBSource;
-import data.sync.common.DBUtils;
+import data.sync.common.*;
 import data.sync.core.WorkerStatistic;
 import data.sync.core.storage.Line;
 import data.sync.core.storage.Storage;
@@ -18,7 +16,7 @@ import java.util.Properties;
  */
 public class MysqlFetcher implements Fetcher{
     private static Logger logger = Logger.getLogger(MysqlFetcher.class);
-
+    Configuration conf = new Configuration();
     private volatile boolean stop = false;
     private String dbname;
     private String user;
@@ -38,6 +36,7 @@ public class MysqlFetcher implements Fetcher{
         this.user = attempt.taskDesc().user();
         this.pwd = attempt.taskDesc().pwd();
         this.sql = attempt.taskDesc().sql();
+        conf.addResource(Constants.CONFIGFILE_NAME);
     }
 
     @Override
@@ -89,14 +88,14 @@ public class MysqlFetcher implements Fetcher{
         }
         String url = "jdbc:mysql://" + this.ip + ":" + this.port + "/"
                 + this.dbname + "?" + encodeDetail
-                + "yearIsDateType=false&zeroDateTimeBehavior=convertToNull"
-                + "&defaultFetchSize=" + String.valueOf(Integer.MIN_VALUE);
+                + "yearIsDateType=false&zeroDateTimeBehavior=convertToNull&useCompression=true"
+                + "&defaultFetchSize="+Integer.MIN_VALUE;
 
         p.setProperty("driverClassName", "com.mysql.jdbc.Driver");
         p.setProperty("url", url);
         p.setProperty("username", user);
         p.setProperty("password", pwd);
-        p.setProperty("maxActive", "40");
+        p.setProperty("maxActive", conf.get("mysql.coon.max.active","200"));
         p.setProperty("initialSize", "10");
         p.setProperty("maxIdle", "10");
         p.setProperty("maxWait", "1000");

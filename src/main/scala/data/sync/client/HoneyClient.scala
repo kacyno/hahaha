@@ -39,25 +39,34 @@ class HoneyClient extends Logging {
     urlPattern.format(Constants.QUEEN_NAME, hp(0), hp(1), Constants.QUEEN_NAME)
   })
 
+  def stopClient(): Unit = {
+    system.shutdown()
+  }
 
   lazy val system = ActorSystem("Client", akkaConf)
   val actor = system.actorOf(Props(new HoneyClientActor))
   var master: ActorSelection = null
-  while(master==null){
+  var masterAddress: Address = null
+  while (master == null) {
     Thread.sleep(1000)
-    println("Waiting connect to Queen...")
+    log.info("Waiting for queen to connect...")
   }
+  val actorRef: ActorRef = Await.result(master.resolveOne()(Duration.create(15, "seconds")), Duration.create(15, "seconds"))
 
-  class HoneyClientActor extends Actor with ActorLogReceive with Logging{
+  class HoneyClientActor extends Actor with ActorLogReceive with Logging {
     override def receiveWithLogging = {
       case RegisteredClient(masterUrl) =>
-        registered = true
-        changeMaster(masterUrl)
-      case DisassociatedEvent(_, address, _) =>
-        logWarning(s"Connection to $address failed; waiting for queen to reconnect...")
+        if (!registered) {
+          registered = true
+          changeMaster(masterUrl)
+        }
+      case DisassociatedEvent(_, address, _) if address == masterAddress =>
+        log.error(s"Connection to $address failed; waiting for queen to reconnect...")
+        registerWithMaster
       case AssociationErrorEvent(cause, _, address, _, _) if isPossibleMaster(address) =>
-        logWarning(s"Could not connect to $address: $cause")
+        log.error(s"Could not connect to $address: $cause")
     }
+
     def tryRegisterAllMasters() {
       for (masterAkkaUrl <- masterAkkaUrls) {
         logInfo("Connecting to queen " + masterAkkaUrl + "...")
@@ -70,16 +79,22 @@ class HoneyClient extends Logging {
       tryRegisterAllMasters()
       import context.dispatcher
       var retries = 0
-      registrationRetryTimer = Some {
-        context.system.scheduler.schedule(REGISTRATION_TIMEOUT, 2.seconds) {
-          retries += 1
-          if (registered) {
-            registrationRetryTimer.foreach(_.cancel())
-          } else if (retries >= REGISTRATION_RETRIES) {
-            logInfo("All queens are unresponsive! Giving up.")
-            System.exit(1)
-          } else {
-            tryRegisterAllMasters()
+      registrationRetryTimer
+      match {
+        case Some(_) =>
+          logInfo("Not spawning another attempt to register with the master, since there is an" +
+            " attempt scheduled already.")
+        case None => registrationRetryTimer = Some {
+          context.system.scheduler.schedule(REGISTRATION_TIMEOUT, 5.seconds) {
+            retries += 1
+            if (registered) {
+              registrationRetryTimer.foreach(_.cancel())
+            } else if (retries >= REGISTRATION_RETRIES) {
+              logInfo("All queens are unresponsive! Giving up.")
+              System.exit(1)
+            } else {
+              tryRegisterAllMasters()
+            }
           }
         }
       }
@@ -87,7 +102,10 @@ class HoneyClient extends Logging {
 
     def changeMaster(url: String) {
       activeMasterUrl = url
+      masterAddress = AkkaUtils.extractAddressFromUrl(url)
       master = context.actorSelection(url)
+      registrationRetryTimer.foreach(_.cancel())
+      registrationRetryTimer = None
     }
 
     private def isPossibleMaster(remoteUrl: Address) = {
@@ -109,7 +127,7 @@ class HoneyClient extends Logging {
       }
     }
 
-    val REGISTRATION_TIMEOUT = 0.seconds
+    val REGISTRATION_TIMEOUT = 5.seconds
     val REGISTRATION_RETRIES = 3
     var registered = false
     var activeMasterUrl: String = null
@@ -117,24 +135,19 @@ class HoneyClient extends Logging {
   }
 
 
-
-  def submitJobToQueen(job: SubmitJob):String= {
-    val actorRef = Await.result(master.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
-    AkkaUtils.askWithReply[SubmitResult](job, actorRef, Duration.create(5, "seconds")).toString
+  def submitJobToQueen(job: SubmitJob): String = {
+    AkkaUtils.askWithReply[SubmitResult](job, actorRef, Duration.create(21474835, "seconds")).toString
   }
 
-  def killJob(kill: KillJob):String= {
-    val actorRef = Await.result(master.resolveOne()(Duration.create(5, "seconds")), Duration.create(5, "seconds"))
-    AkkaUtils.askWithReply[KillJobResult](kill, actorRef, Duration.create(5, "seconds")).toString
+  def killJob(kill: KillJob): String = {
+    AkkaUtils.askWithReply[KillJobResult](kill, actorRef, Duration.create(21474835, "seconds")).toString
   }
-
-
 }
 
 
 object HoneyClient {
   var outputPath: String = null
-  var taskNum: Int = 2
+  var taskNum: Int = 0
   var isSubmit: Boolean = false
   var isKill: Boolean = false
   var jobId: String = null
@@ -143,6 +156,7 @@ object HoneyClient {
   var user = System.getProperties.getProperty("user.name") + "@" + NetUtil.getHostname
 
   def main(args: Array[String]) {
+    var client: HoneyClient = null
     if (args.length == 0)
       printUsageAndExit(1)
     else {
@@ -156,8 +170,11 @@ object HoneyClient {
         val desc = source.mkString
         //      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
         val submitJob = parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))
-        if (taskNum > 0)
+        if (taskNum > 0) {
           submitJob.taskNum = taskNum
+        } else if (submitJob.taskNum == 0) {
+          submitJob.taskNum = 2
+        }
         if (StringUtils.isNotEmpty(outputPath))
           submitJob.targetDir = outputPath
         if (StringUtils.isNotEmpty(jobName))
@@ -170,14 +187,18 @@ object HoneyClient {
           println("miss job-name [-name]")
           System.exit(1)
         }
-        println(new HoneyClient().submitJobToQueen(submitJob))
+        client = new HoneyClient()
+        println(client.submitJobToQueen(submitJob))
+
       }
       if (isKill) {
         if (StringUtils.isEmpty(jobId)) {
           printUsageAndExit(1)
         }
-        println(new HoneyClient().killJob(KillJob(jobId)))
+        client = new HoneyClient()
+        println(client.killJob(KillJob(jobId)))
       }
+      client.stopClient()
     }
 
   }

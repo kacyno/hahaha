@@ -43,7 +43,6 @@ public abstract class Storage {
 
 	public void setPushClosed(boolean close) {
 		pushClosed = close;
-        sinker.stop();
 		return;
 	}
 

@@ -19,10 +19,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class Bee(conf: Configuration) extends Logging {
   private val daemonThreadFactoryBuilder: ThreadFactoryBuilder =
     new ThreadFactoryBuilder().setDaemon(true)
-  private val executorPool = Executors.newCachedThreadPool(daemonThreadFactoryBuilder.build()).asInstanceOf[ThreadPoolExecutor]
-  private val workerSet = Collections.synchronizedSet(new util.HashSet[Worker]) //将正在运行的worker放在这里以便进行统一管理
 
+  //fetcher与sinker的运行线程池
+  private val executorPool = Executors.newCachedThreadPool(daemonThreadFactoryBuilder.build()).asInstanceOf[ThreadPoolExecutor]
+
+  //将正在运行的worker放在这里以便进行统一管理
+  private val workerSet = Collections.synchronizedSet(new util.HashSet[Worker])
+
+  //beeId，由queen指定
   var beeId: String = null
+
 
   val beeHost = conf.get(Constants.BEE_ADDR, Constants.BEE_ADDR_DEFAULT)
   val beePort = conf.getInt(Constants.BEE_PORT, Constants.BEE_PORT_DEFAULT)
@@ -32,17 +38,25 @@ class Bee(conf: Configuration) extends Logging {
     val hp = e.split(":")
     "akka.tcp://%s@%s:%s/user/%s".format(Constants.QUEEN_NAME, hp(0), hp(1), Constants.QUEEN_NAME)
   })
+
   val beeWorkerNum = conf.getInt(Constants.BEE_WORKER_NUM, Constants.BEE_WORKER_NUM_DEFAULT)
 
   var master: ActorSelection = null
+
   var activeMasterUrl: String = ""
+
+  var masterAddress: Address = null
+
   var registrationRetryTimer: Option[Cancellable] = None
+
   @volatile var registered = false
   @volatile var connected = false
+
   var connectionAttemptCount = 0
 
 
   class BeeActor extends Actor with ActorLogReceive with Logging {
+
     override def receiveWithLogging = {
       case RegisteredBee(queenUrl, id) =>
         beeId = id;
@@ -50,11 +64,13 @@ class Bee(conf: Configuration) extends Logging {
         registered = true
         changeMaster(queenUrl)
       case StartTask(tad) => startTask(tad)
-      case KillJob(jobId) => killJob(jobId)
+      case KillJob(jobId) =>
+        logInfo("Get message KillJob:"+jobId)
+        killJob(jobId)
       case StopAttempt(attemptId) => stopAttempt(attemptId)
       case ReregisterWithMaster =>
         reregisterWithMaster()
-      case x: DisassociatedEvent =>
+      case x: DisassociatedEvent if x.remoteAddress == masterAddress =>
         stopAll()
         masterDisconnected()
     }
@@ -76,6 +92,7 @@ class Bee(conf: Configuration) extends Logging {
     def changeMaster(url: String) {
       activeMasterUrl = url
       master = context.actorSelection(url)
+      masterAddress = AkkaUtils.extractAddressFromUrl(url)
       connected = true
       registrationRetryTimer.foreach(_.cancel())
       registrationRetryTimer = None
@@ -136,6 +153,7 @@ class Bee(conf: Configuration) extends Logging {
   private def stopAttempt(attemptId: String): Unit = {
     for (worker <- workerSet) {
       if (worker.getAttempt.attemptId == attemptId) {
+        logInfo("Stop Attempt:"+attemptId)
         worker.getFetcher.stop();
         worker.getSinker.stop();
       }
@@ -143,6 +161,7 @@ class Bee(conf: Configuration) extends Logging {
   }
 
   private def stopAll(): Unit = {
+    logInfo("Stop All Worker...")
     for (worker <- workerSet) {
       worker.getFetcher.stop()
       worker.getSinker.stop()
@@ -194,17 +213,19 @@ class Bee(conf: Configuration) extends Logging {
   向queen进行状态汇报
    */
   def updateStatus() = {
-    var buffer = ArrayBuffer[BeeAttemptReport]()
-    for (worker <- workerSet) {
-      buffer += BeeAttemptReport(beeId, worker.getAttempt.attemptId,
-        worker.getReadCount,
-        worker.getWriteCount,
-        worker.getBufferSize,
-        new Date().getTime,
-        worker.getError,
-        worker.getAttempt.status)
+    if (master != null) {
+      var buffer = ArrayBuffer[BeeAttemptReport]()
+      for (worker <- workerSet) {
+        buffer += BeeAttemptReport(beeId, worker.getAttempt.attemptId,
+          worker.getReadCount,
+          worker.getWriteCount,
+          worker.getBufferSize,
+          new Date().getTime,
+          worker.getError,
+          worker.getAttempt.status)
+      }
+      master ! StatusUpdate(beeId, buffer.toArray)
     }
-    master ! StatusUpdate(beeId, buffer.toArray)
   }
 
   @volatile var heartbeat = false
@@ -212,6 +233,7 @@ class Bee(conf: Configuration) extends Logging {
 
   def stopDriverHeaertbeater(): Unit = {
     heartbeat = false
+    if(heartBeatThread!=null)
     heartBeatThread.interrupt
   }
 

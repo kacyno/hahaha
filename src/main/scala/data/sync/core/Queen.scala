@@ -25,6 +25,8 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
   var leaderElectionAgent: LeaderElectionAgent = _
   override def preStart() {
     context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
+
+    //选择ha方案
     val (persistenceEngine_, leaderElectionAgent_) = RECOVERY_MODE match {
       case "ZOOKEEPER" =>
         logInfo("Persisting recovery state to ZooKeeper")
@@ -71,19 +73,22 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
           |Job desc:
           |%s
         """.stripMargin.format(sender.path.address,JSONObject.fromObject(job).toString()))
-      try {
-        val jobId = submitJob(job)
-        //保存作业，用于恢复
-        persistenceEngine.addJob(jobId,(jobId,job))
-        sender ! SubmitResult(jobId)
-      }catch{
-        case e:Exception=>
-          logError("submit job error",e)
-          sender!SubmitResult(e.getMessage)
+      if(Queen.state==RecoveryState.ACTIVE) {
+        try {
+          val jobId = submitJob(job)
+          sender ! SubmitResult(jobId)
+        } catch {
+          case e: Exception =>
+            logError("submit job error", e)
+            sender ! SubmitResult(e.getMessage)
+        }
+      }else{
+        sender ! SubmitResult("Server is not Active")
       }
     case StatusUpdate(beeId, reports) => updateBees(beeId, reports)
     case data.sync.common.ClientMessages.KillJob(jobId)=>
       try {
+        logInfo("Kill Job:"+jobId)
         JobManager.killJob(jobId, JobStatus.KILLED)
       }catch{
         case e:Exception=>
@@ -117,9 +122,20 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
     case other =>
       logInfo(other.toString)
   }
+
+  /*
+   * 从恢复目录中将未完成的任务重新提交
+   */
   def beginRecovery(jobs:Seq[(String,SubmitJob)]): Unit ={
     Queen.state = RecoveryState.RECOVERING
-    jobs.foreach(e=>submitJob(e._2,e._1))
+    logInfo("Start Recovering...")
+    jobs.foreach(e=>{
+      logInfo("Recovering "+e._1+" ...")
+      submitJob(e._2)
+      logInfo("Deleting job after re-submit...")
+      persistenceEngine.removeJob(e._1)
+
+    })
     self ! CompleteRecovery
   }
   def completeRecovery(): Unit = {
@@ -185,6 +201,9 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
     var jobId = jd
     if(jd==null)
       jobId = IDGenerator.generatorJobId();
+    //保存作业，用于恢复
+    persistenceEngine.addJob(jobId,(jobId,submit))
+
     val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir)
     val job = JobInfo(jobId,
       submit.dbinfos,
