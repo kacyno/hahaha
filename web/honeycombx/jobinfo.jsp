@@ -58,16 +58,19 @@
         id="table"
         data-classes="table table-hover table-condensed"
         data-striped="true"
-        data-sort-name="taskId"
-        data-sort-order="asc"
+        data-sort-name="startTime"
+        data-sort-order="desc"
+        data-show-columns="true"
         >
     <thead>
     <tr>
         <th data-formatter="runningFormatter" data-sortable="true">Index</th>
         <th data-field="taskId" data-formatter="taskFormatter" data-sortable="true">TaskId</th>
         <th data-field="sql" data-sortable="true">SQL</th>
-        <th data-field="table" data-sortable="true">表</th>
-        <th data-field="db" data-sortable="true">库</th>
+        <th data-field="totalRead" data-sortable="true">读取记录</th>
+        <th data-field="totalWrite" data-sortable="true">写入记录</th>
+        <th data-field="table" data-sortable="true" data-visible="false">表</th>
+        <th data-field="db" data-sortable="true" data-visible="false">库</th>
         <th data-field="startTime" data-sortable="true">开始时间</th>
         <th data-field="finishTime" data-sortable="true">结束时间</th>
         <th data-field="status" data-sortable="true">状态</th>

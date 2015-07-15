@@ -198,12 +198,7 @@ public class JobHistory {
         public long getTotalRead() {
             long read = 0;
             for(HTask t:tasks){
-                long maxRead = 0;
-                for(HAttempt e:t.attempts){
-                    if(e.getReadNum()>maxRead)
-                        maxRead = e.getReadNum();
-                }
-                read+=maxRead;
+                read+=t.getTotalRead();
             }
             totalRead = read;
             return totalRead;
@@ -216,12 +211,7 @@ public class JobHistory {
         public long getTotalWrite() {
             long write = 0;
             for(HTask t:tasks){
-                long maxWrite = 0;
-                for(HAttempt e:t.attempts){
-                    if(e.getWriteNum()>maxWrite)
-                        maxWrite = e.getWriteNum();
-                }
-                write+=maxWrite;
+                write+=t.getTotalWrite();
             }
             totalWrite = write;
             return totalWrite;
@@ -339,6 +329,8 @@ public class JobHistory {
         private String targetDir;
         private String startTime;
         private String finishTime;
+        private long totalRead;
+        private long totalWrite;
         private Set<HAttempt> attempts;
         private TaskStatus status;
 
@@ -357,6 +349,24 @@ public class JobHistory {
             task.startTime = format.format(new Date(ti.startTime()));
             task.finishTime =ti.finishTime()==0?"--": format.format(new Date(ti.finishTime()));
             return task;
+        }
+
+        public long getTotalRead() {
+            long maxRead = 0;
+            for(HAttempt e:attempts){
+                if(e.getReadNum()>maxRead)
+                    maxRead = e.getReadNum();
+            }
+            return maxRead;
+        }
+
+        public long getTotalWrite() {
+            long maxWrite = 0;
+            for(HAttempt e:attempts){
+                if(e.getWriteNum()>maxWrite)
+                    maxWrite = e.getWriteNum();
+            }
+            return maxWrite;
         }
 
         public String getStartTime() {

@@ -115,8 +115,8 @@
             <thead>
             <tr>
                 <th data-field="jobId" data-formatter="jobFormatter" data-sortable="true">JobId</th>
-                <th data-field="jobName" data-sortable="true">作业名</th>
-                <th data-field="jobDesc" data-sortable="true">描述</th>
+                <th data-field="jobName" data-sortable="true" >作业名</th>
+                <th data-field="jobDesc" data-sortable="true" data-visible="false">描述</th>
                 <th data-field="priority" data-visible="false">优先级</th>
                 <th data-field="appendTasks" data-sortable="true">挂起任务</th>
                 <th data-field="runningTasks" data-sortable="true">运行任务</th>
@@ -144,7 +144,7 @@
             <thead>
             <tr>
                 <th data-field="jobId" data-formatter="jobFormatter" data-sortable="true">JobId</th>
-                <th data-field="jobDesc" data-sortable="true">描述</th>
+                <th data-field="jobDesc" data-sortable="true" >描述</th>
                 <th data-field="priority" data-sortable="true">优先级</th>
                 <th data-field="targetDir" data-sortable="true">输出路径</th>
                 <th data-field="startTime" data-sortable="true">开始时间</th>

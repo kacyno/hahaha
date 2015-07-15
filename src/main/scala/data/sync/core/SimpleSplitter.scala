@@ -1,16 +1,18 @@
 package data.sync.core
 
+import java.sql.ResultSet
 import java.util.Properties
 import data.sync.common.ClientMessages.DBInfo
 import data.sync.common.ClusterMessages.TaskInfo
-import data.sync.common.{DBUtils, DBSource}
+import data.sync.common.{Logging, DBUtils, DBSource}
 import org.apache.commons.lang.StringUtils
 import scala.collection.mutable
 import scala.collection.JavaConversions._
+
 /**
  * Created by hesiyuan on 15/6/24.
  */
-object SimpleSplitter extends Splitter {
+object SimpleSplitter extends Splitter with Logging {
   override def split(jobId: String, dbinfos: Array[DBInfo], num: Int, dir: String): java.util.Set[TaskInfo] = {
     var set = new java.util.HashSet[TaskInfo]()
     val tableNum = dbinfos.foldLeft(0)((r, d) => r + d.tables.size)
@@ -20,7 +22,7 @@ object SimpleSplitter extends Splitter {
       //表比期望任务数还多，则以表的个数做为任务数
       for (db <- dbinfos) {
         for (table <- db.tables)
-          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
+          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
         i += 1
       }
     } else {
@@ -33,46 +35,69 @@ object SimpleSplitter extends Splitter {
       var sql = "select min(%s),max(%s) from %s"
 
       for (db <- dbinfos) {
+        logInfo(db.toString)
         DBSource.register(this.getClass, db.ip, db.port, db.db, createProperties("utf-8", db.ip, db.port, db.db, db.user, db.pwd))
         for (table <- db.tables) {
           val conn = DBSource.getConnection(this.getClass, db.ip, db.port, db.db)
+          var rs:ResultSet = null
           try {
-            val rs = DBUtils.query(conn, sql.format(db.indexFiled, db.indexFiled, table))
+            rs = DBUtils.query(conn, sql.format(db.indexFiled, db.indexFiled, table))
             var min = 0l;
             var max = 0l;
             if (rs.next()) {
               min = rs.getLong(1);
               max = rs.getLong(2);
             }
-            tableInfo(table) = (min, max)
-          }finally{
-            conn.close()
+            tableInfo(table+db.ip+db.port+db.db) = (min, max)
+          } finally {
+            try {
+              DBUtils.closeResultSet(rs)
+            }catch{
+              case _=>
+            }
+            try {
+              conn.close()
+            }catch{
+              case _=>
+            }
           }
         }
       }
-      val totalNum = tableInfo.foldLeft(0l)((n, e) => n + e._2._2 - e._2._1)
-      val perNum = totalNum / num;
-      for (db <- dbinfos) {
-        for (table <- db.tables) {
-          val info = tableInfo(table)
-          var p = (info._2 - info._1) / perNum
-          if (!(p > 0 && ((info._2 - info._1) % perNum) < (perNum / 3)))
-            p += 1
-          for (j <- 1l to p) {
-            var cond = " %s>=%d and %s<%d"
-            if (db.sql.toLowerCase.indexOf("where") == -1) {
-              cond = " where " + cond
-            }else
-              cond = " and " + cond
-            if (j == p)
-              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2+1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
-            else
-              set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",0l,0l)
-            i += 1
-          }
+      val totalNum = tableInfo.foldLeft(0l)((n, e) => n + {
+        if (e._2._2 > 0) e._2._2 - e._2._1 + 1 else e._2._2 - e._2._1
+      })
+      logInfo("job total num:" + totalNum)
+      if (totalNum != 0) {
+        var perNum = totalNum / num
+        if (totalNum < num) {
+          perNum = totalNum
         }
-      }
 
+        for (db <- dbinfos) {
+          for (table <- db.tables) {
+            val info = tableInfo(table+db.ip+db.port+db.db)
+            if (info._2 > 0) {
+              var p = (info._2 - info._1+1) / perNum
+              if (!(p > 0 && ((info._2 - info._1+1) % perNum) < (perNum / 3.0)))
+                p += 1
+              for (j <- 1l to p) {
+                var cond = " %s>=%d and %s<%d"
+                if (db.sql.toLowerCase.indexOf("where") == -1) {
+                  cond = " where " + cond
+                } else
+                  cond = " and " + cond
+                if (j == p)
+                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2 + 1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
+                else
+                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
+                i += 1
+              }
+            }
+          }
+        }
+      } else {
+        throw new RuntimeException("No data to trans")
+      }
     }
     set
   }

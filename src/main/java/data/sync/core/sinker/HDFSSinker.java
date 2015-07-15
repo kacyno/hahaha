@@ -22,9 +22,11 @@ public class HDFSSinker implements Sinker {
     private FileSystem fs;
     private Path target;
     private volatile boolean stop = false;
+    private String tmpId;
     @Override
     public void init(ClusterMessages.TaskAttemptInfo attempt) throws Exception{
         Configuration conf = new Configuration();
+        tmpId = attempt.attemptId();
         this.fs = FileSystem.get(conf);
         this.target = new Path(attempt.taskDesc().targetDir()+"/"+attempt.attemptId());
     }
@@ -39,7 +41,7 @@ public class HDFSSinker implements Sinker {
             stat.incWriteNum(1);
         }
         pw.close();
-        logger.info("sinker cost:"+(System.currentTimeMillis()-start));
+        logger.info(tmpId+" sinker cost:"+(System.currentTimeMillis()-start));
     }
 
     @Override

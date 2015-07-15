@@ -26,7 +26,7 @@ public class MysqlFetcher implements Fetcher{
     private String ip;
     private String port;
     private String encode ="utf8";
-
+    private String tmpId;
     @Override
     public void init(ClusterMessages.TaskAttemptInfo attempt) {
         this.dbname = attempt.taskDesc().db();
@@ -36,6 +36,7 @@ public class MysqlFetcher implements Fetcher{
         this.user = attempt.taskDesc().user();
         this.pwd = attempt.taskDesc().pwd();
         this.sql = attempt.taskDesc().sql();
+        this.tmpId = attempt.attemptId();
         conf.addResource(Constants.CONFIGFILE_NAME);
     }
 
@@ -43,9 +44,10 @@ public class MysqlFetcher implements Fetcher{
     public void fetchDataToStorage(Storage storage, WorkerStatistic stat) throws Exception{
         DBSource.register(this.getClass(), ip, port, dbname, createProperties());
         Connection conn = DBSource.getConnection(this.getClass(), ip, port, dbname);
+        ResultSet rs=null;
         try {
             long start = System.currentTimeMillis();
-            ResultSet rs = DBUtils.query(conn, sql);
+            rs = DBUtils.query(conn, sql);
             int size = 0;
             if(rs.next()) {
 
@@ -64,11 +66,17 @@ public class MysqlFetcher implements Fetcher{
                 storage.push(l);
                 stat.incReadNum(1);
             }
-            logger.info("fetcher cost:"+(System.currentTimeMillis()-start));
+            logger.info(tmpId+" fetcher cost:"+(System.currentTimeMillis()-start));
         } finally{
+            try{
+                DBUtils.closeResultSet(rs);
+            }catch(Exception e){
+                logger.error(tmpId+" RS close error",e);
+            }
             try {
                 conn.close();
-            } catch (SQLException e) {
+            } catch (Exception e) {
+                logger.error(tmpId+" conn close error");
             }
         }
 

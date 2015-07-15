@@ -57,8 +57,12 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
         // ignore, don't send response
       }else {
         val beeId = registerBee(cores, sender)
-        sender ! ClusterMessages.RegisteredBee(queenUrl,beeId)
-        assignTask()
+        if(beeId!=null) {
+          sender ! ClusterMessages.RegisteredBee(queenUrl, beeId)
+          assignTask()
+        }else{
+          logInfo(sender.path.address.hostPort+" already registered")
+        }
       }
     case RegisterClient =>
       if (Queen.state == RecoveryState.STANDBY) {
@@ -169,8 +173,12 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
   def registerBee(cores: Int, sender: ActorRef): String = {
     val beeId = sender.path.address.hostPort
     logInfo("Registering Bee：" + beeId)
-    BeeManager.updateBee(BeeDesc(0, cores, beeId, sender))
-    beeId
+    if(!BeeManager.connDic.containsKey(beeId)) {
+      BeeManager.updateBee(BeeDesc(0, cores, beeId, sender))
+      beeId
+    }else{
+      null
+    }
   }
 
   /*
@@ -201,10 +209,9 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
     var jobId = jd
     if(jd==null)
       jobId = IDGenerator.generatorJobId();
+    val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir)
     //保存作业，用于恢复
     persistenceEngine.addJob(jobId,(jobId,submit))
-
-    val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir)
     val job = JobInfo(jobId,
       submit.dbinfos,
       submit.priority,

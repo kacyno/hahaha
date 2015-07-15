@@ -61,7 +61,7 @@ class Bee(conf: Configuration) extends Logging {
       case RegisteredBee(queenUrl, id) =>
         beeId = id;
         logInfo("Registered Executor!!")
-        registered = true
+
         changeMaster(queenUrl)
       case StartTask(tad) => startTask(tad)
       case KillJob(jobId) =>
@@ -90,10 +90,13 @@ class Bee(conf: Configuration) extends Logging {
     }
 
     def changeMaster(url: String) {
+      logInfo("change master "+url)
+      registered = true
       activeMasterUrl = url
       master = context.actorSelection(url)
       masterAddress = AkkaUtils.extractAddressFromUrl(url)
       connected = true
+      logInfo("cancel registrationRetryTimer by changeMaster")
       registrationRetryTimer.foreach(_.cancel())
       registrationRetryTimer = None
       startDriverHeartbeater
@@ -104,13 +107,16 @@ class Bee(conf: Configuration) extends Logging {
       connected = false
       stopDriverHeaertbeater
       master = null
+      masterAddress=null
       registerWithMaster()
     }
 
 
     private def reregisterWithMaster(): Unit = {
       connectionAttemptCount += 1
+      logInfo("reregisterWithMaster "+connectionAttemptCount)
       if (registered) {
+        logInfo("cancel registrationRetryTimer by reregisterWithMaster")
         registrationRetryTimer.foreach(_.cancel())
         registrationRetryTimer = None
       } else if (connectionAttemptCount <= 100) {
@@ -123,8 +129,8 @@ class Bee(conf: Configuration) extends Logging {
         if (connectionAttemptCount == 10) {
           registrationRetryTimer.foreach(_.cancel())
           registrationRetryTimer = Some {
-            context.system.scheduler.schedule(5.seconds,
-              5.seconds, self, ReregisterWithMaster)
+            context.system.scheduler.schedule(60.seconds,
+              60.seconds, self, ReregisterWithMaster)
           }
         }
       } else {
@@ -136,12 +142,13 @@ class Bee(conf: Configuration) extends Logging {
     def registerWithMaster() {
       registrationRetryTimer match {
         case None =>
+          logInfo("create registrationRetryTimer")
           registered = false
           tryRegisterAllMasters()
           connectionAttemptCount = 0
           registrationRetryTimer = Some {
-            context.system.scheduler.schedule(1.seconds,
-              1.seconds, self, ReregisterWithMaster)
+            context.system.scheduler.schedule(20.seconds,
+              20.seconds, self, ReregisterWithMaster)
           }
         case Some(_) =>
           logInfo("Not spawning another attempt to register with the queen, since there is an" +
