@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        System.out.println(Integer.MIN_VALUE);
+        System.out.println(new Date().getTime());
+        System.out.println((System.currentTimeMillis()));
     }
 }

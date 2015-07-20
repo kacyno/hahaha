@@ -142,6 +142,6 @@ object ClusterMessages {
   case class StopAttempt(attemptId: String) extends ClusterMessage
   //bee相关信息描述
   case class BeeDesc(@BeanProperty var runningWorker: Int, @BeanProperty var totalWorker: Int, @BeanProperty beeId: String, sender: ActorRef)
-  case object ReregisterWithMaster extends ClusterMessage
+//  case object ReregisterWithMaster extends ClusterMessage
   case class MasterChanged(masterUrl: String) extends ClusterMessage
 }

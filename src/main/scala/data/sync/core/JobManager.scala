@@ -14,7 +14,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
 object JobManager extends Logging {
-  val hdfs:HdfsUtil =HdfsUtil.getHdfsUtil()
+  val hdfs: HdfsUtil = HdfsUtil.getHdfsUtil()
   val MAX_ATTEMPT = 3
   //taskAttemptId到taskAttempt的映射
   private val taskAttemptDic = new ConcurrentHashMap[String, TaskAttemptInfo]
@@ -29,8 +29,9 @@ object JobManager extends Logging {
   //taskAttempt->report
   private val attempt2report = new ConcurrentHashMap[String, BeeAttemptReport]
 
-  private var persist:PersistenceEngine=null
-  def init(persist:PersistenceEngine): Unit ={
+  private var persist: PersistenceEngine = null
+
+  def init(persist: PersistenceEngine): Unit = {
     this.persist = persist
   }
 
@@ -106,16 +107,33 @@ object JobManager extends Logging {
 
   //对长时间没有状态更新的任务启动并行
   def checkTimeOut(): Boolean = JobManager.synchronized {
+    logInfo("Timout Check...")
     var needAssign = false
-    val now = new Date().getTime
-    for (attemptId <- attempt2bee.keys()) {
+    val now = System.currentTimeMillis()
+    for ((attemptId, bee) <- attempt2bee) {
       //两分钟没有汇报状态的将重新生成一个attempt并行执行,并不会杀死原attempt
-      if (now - attempt2report(attemptId).time > Constants.TASK_TIMEOUT && attempt2report(attemptId).status != TaskAttemptStatus.FAILED && attempt2report(attemptId).status != TaskAttemptStatus.FINISHED) {
+      //遍历汇报集合，发现长时间未更新的且并未完成的attempt时找到其对应的task
+      //查看该task是否需要进行预测执行
+
+      val report = attempt2report(attemptId)
+      if (now - report.time > Constants.TASK_TIMEOUT
+        && report.status != TaskAttemptStatus.FAILED
+        && report.status != TaskAttemptStatus.FINISHED
+        && report.status != TaskAttemptStatus.KILLED) {
         val task = taskAttemptDic(attemptId).taskDesc
-        val job = jobDic(task.jobId)
-        job.runningTasks -= task
-        job.appendTasks += task
-        needAssign = true
+        //只有当当前attempt为task最新的attempt时才会进行探测执行，
+        if (attemptId == taskDic(task.taskId).last.attemptId) {
+          //该task是否在重试范围内
+          val job = jobDic(task.jobId)
+          if (taskDic(task.taskId).length < MAX_ATTEMPT && !job.appendTasks.contains(task)) {
+            // 找出对应task最新的attempt看是否需要再次探测执行
+            logInfo("Attempt "+attemptId+" will have a brother!")
+            task.lastErrorBee = bee
+            job.runningTasks -= task
+            job.appendTasks += task
+            needAssign = true
+          }
+        }
       }
     }
     needAssign
@@ -154,6 +172,7 @@ object JobManager extends Logging {
         finishedAttempt(report.attemptId, TaskAttemptStatus.FINISHED)
 
         task.finished(TaskStatus.FINISHED)
+        job.appendTasks.remove(task)//可能任务在append中等待重试
         job.runningTasks.remove(task)
         job.finishedTasks += task
 
@@ -190,7 +209,7 @@ object JobManager extends Logging {
       val task = atp.taskDesc
       val job = jobDic(atp.taskDesc.jobId)
       job.runningTasks -= task
-      if (taskDic(task.taskId).length == MAX_ATTEMPT) {
+      if (taskDic(task.taskId).length >= MAX_ATTEMPT) {
         task.finished(TaskStatus.FAILED)
         job.failedTasks += task
         killJob(job.jobId)
@@ -220,10 +239,10 @@ object JobManager extends Logging {
         }
         hdfs.delete(new Path(job.targetDir + "tmp/")) //失败的任务可能在删文件时还在操作，只删成功的
         hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
-      }catch{
+      } catch {
         //IO操作，当报错时捕获，不影响其它后续操作
-        case e:Throwable=>{
-          log.error("commit error!",e)
+        case e: Throwable => {
+          log.error("commit error!", e)
           job.finished(JobStatus.FAILED)
         }
       }
@@ -284,14 +303,14 @@ object JobManager extends Logging {
   /*
    * 清理job相关数据,并将其保存在文件中
    */
-  private def  clearJob(jobId: String): Unit = {
+  private def clearJob(jobId: String): Unit = {
     try {
       //将历史保存
       JobHistory.addJobToHistory(jobId)
       //将job备份清除
       persist.removeJob(jobId)
-    }catch{
-      case e:Throwable=>log.error("clear error!",e)
+    } catch {
+      case e: Throwable => log.error("clear error!", e)
     }
     //清理数据
     val job = jobDic(jobId)

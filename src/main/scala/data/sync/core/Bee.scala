@@ -1,10 +1,10 @@
 package data.sync.core
 
 import java.util
-import java.util.{Date, Collections}
+import java.util.{TimerTask, Timer, Date, Collections}
 import java.util.concurrent.{ThreadPoolExecutor, Executors}
 import akka.actor._
-import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
+import akka.remote.{RemoteActorRef, DisassociatedEvent, RemotingLifecycleEvent}
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import data.sync.common._
 import ClusterMessages._
@@ -47,12 +47,13 @@ class Bee(conf: Configuration) extends Logging {
 
   var masterAddress: Address = null
 
-  var registrationRetryTimer: Option[Cancellable] = None
+  var registrationRetryTimer: Option[Timer] = None
 
   @volatile var registered = false
   @volatile var connected = false
 
   var connectionAttemptCount = 0
+
 
 
   class BeeActor extends Actor with ActorLogReceive with Logging {
@@ -68,8 +69,8 @@ class Bee(conf: Configuration) extends Logging {
         logInfo("Get message KillJob:"+jobId)
         killJob(jobId)
       case StopAttempt(attemptId) => stopAttempt(attemptId)
-      case ReregisterWithMaster =>
-        reregisterWithMaster()
+//      case ReregisterWithMaster =>
+//        reregisterWithMaster()
       case x: DisassociatedEvent if x.remoteAddress == masterAddress =>
         stopAll()
         masterDisconnected()
@@ -84,7 +85,7 @@ class Bee(conf: Configuration) extends Logging {
     private def tryRegisterAllMasters() {
       for (masterAkkaUrl <- queenUrls) {
         logInfo("Connecting to queen " + masterAkkaUrl + "...")
-        val actor = context.actorSelection(masterAkkaUrl)
+        val actor =context.actorSelection(masterAkkaUrl)
         actor ! RegisterBee(beeWorkerNum)
       }
     }
@@ -106,8 +107,10 @@ class Bee(conf: Configuration) extends Logging {
       logError("Connection to queen failed! Waiting for master to reconnect...")
       connected = false
       stopDriverHeaertbeater
+
       master = null
       masterAddress=null
+
       registerWithMaster()
     }
 
@@ -126,11 +129,16 @@ class Bee(conf: Configuration) extends Logging {
         } else {
           tryRegisterAllMasters()
         }
-        if (connectionAttemptCount == 10) {
+        if (connectionAttemptCount == 60) {
           registrationRetryTimer.foreach(_.cancel())
           registrationRetryTimer = Some {
-            context.system.scheduler.schedule(60.seconds,
-              60.seconds, self, ReregisterWithMaster)
+            val timer = new Timer()
+              timer.schedule(new TimerTask{
+              override def run(): Unit = {
+                reregisterWithMaster()
+              }
+            },60*1000,60*1000)
+            timer
           }
         }
       } else {
@@ -147,8 +155,14 @@ class Bee(conf: Configuration) extends Logging {
           tryRegisterAllMasters()
           connectionAttemptCount = 0
           registrationRetryTimer = Some {
-            context.system.scheduler.schedule(20.seconds,
-              20.seconds, self, ReregisterWithMaster)
+            val timer = new Timer()
+            timer.schedule(new TimerTask {
+              override def run(): Unit = {
+                reregisterWithMaster()
+              }
+            },5*1000,5*1000)
+
+            timer
           }
         case Some(_) =>
           logInfo("Not spawning another attempt to register with the queen, since there is an" +

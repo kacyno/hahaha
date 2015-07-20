@@ -2,7 +2,7 @@
     <property>
         <name>queens.hostport</name>
         <!--<value>localhost:43935,localhost:43936</value>-->
-        <value>10.172.189.11:43935,10.172.189.12:43935</value>
+        <value>10.172.189.11:43935</value>
         <description>queen主机与端口，(HA)多个逗号分开</description>
     </property>
     <property>
@@ -39,12 +39,12 @@
     </property>
     <property>
         <name>bee.addr</name>
-        <value>localhost</value>
+        <value>172.19.92.2</value>
         <description>bee akka地址</description>
     </property>
     <property>
         <name>bee.worker.num</name>
-        <value>10</value>
+        <value>25</value>
         <description>bee中worker数，一个worker为两个线程，即fetcher与sinker各占用一个线程</description>
     </property>
     <property>

@@ -44,11 +44,11 @@ object AkkaUtils extends Logging {
 
                                    ): (ActorSystem, Int) = {
 
-    val akkaThreads = 4
+    val akkaThreads = 10
     val akkaBatchSize = 15
-    val akkaTimeout = 120
+    val akkaTimeout = 3
     val akkaFrameSize = maxFrameSizeBytes()
-    val akkaLogLifecycleEvents = false
+    val akkaLogLifecycleEvents = true
     val lifecycleEvents = if (akkaLogLifecycleEvents) "on" else "off"
     if (!akkaLogLifecycleEvents) {
       // As a workaround for Akka issue #3787, we coerce the "EndpointWriter" log to be silent.
@@ -73,12 +73,15 @@ object AkkaUtils extends Logging {
     //    val akkaSslConfig = securityManager.akkaSSLOptions.createAkkaConfig
     //      .getOrElse(ConfigFactory.empty())
 
+
+    //
     val akkaConf = ConfigFactory.parseMap(scala.collection.mutable.Map[String, String]())
       .withFallback(ConfigFactory.parseString(
       s"""
          |akka.daemonic = on
-         |akka.loggers = [""akka.event.slf4j.Slf4jLogger""]
-         |akka.stdout-loglevel = "ERROR"
+         |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
+         |akka.stdout-loglevel = "DEBUG"
+         |akka.loglevel = "DEBUG"
          |akka.jvm-exit-on-fatal-error = off
          |akka.remote.require-cookie = "$requireCookie"
          |akka.remote.secure-cookie = "$secureCookie"
@@ -97,6 +100,15 @@ object AkkaUtils extends Logging {
          |akka.remote.log-remote-lifecycle-events = $lifecycleEvents
          |akka.log-dead-letters = $lifecycleEvents
          |akka.log-dead-letters-during-shutdown = $lifecycleEvents
+         |akka.remote.retry-gate-closed-for = 1 s
+         |akka.remote.prune-quarantine-marker-after = 1 s
+         |akka.debug.receive = on
+         |akka.debug.autoreceive = on
+         |akka.debug.lifecycle = on
+         |akka.debug.fsm = on
+         |akka.debug.event-stream = on
+         |akka.debug.unhandled = on
+         |akka.debug.router-misconfiguration = on
       """.stripMargin))
 
     val actorSystem = ActorSystem(name, akkaConf)
@@ -185,27 +197,7 @@ object AkkaUtils extends Logging {
       s"Error sending message [message = $message]", lastException)
   }
 
-  def makeDriverRef(name: String, actorSystem: ActorSystem): ActorRef = {
-    val driverActorSystemName = "Queen"
-    val driverHost: String = "localhost"
-    val driverPort: Int = 7077
-    val url = address(protocol(actorSystem), driverActorSystemName, driverHost, driverPort, name)
-    val timeout = AkkaUtils.lookupTimeout()
-    logInfo(s"Connecting to $name: $url")
-    Await.result(actorSystem.actorSelection(url).resolveOne(timeout), timeout)
-  }
 
-  def makeExecutorRef(
-                       name: String,
-                       host: String,
-                       port: Int,
-                       actorSystem: ActorSystem): ActorRef = {
-    val executorActorSystemName = "Bee"
-    val url = address(protocol(actorSystem), executorActorSystemName, host, port, name)
-    val timeout = AkkaUtils.lookupTimeout()
-    logInfo(s"Connecting to $name: $url")
-    Await.result(actorSystem.actorSelection(url).resolveOne(timeout), timeout)
-  }
 
   def protocol(actorSystem: ActorSystem): String = {
     val akkaConf = actorSystem.settings.config
