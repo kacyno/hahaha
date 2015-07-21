@@ -158,6 +158,7 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
       val bee = BeeManager.getBeeByAddress(x.remoteAddress)
       if (bee != null) {
         logInfo("Remove bee "+bee.beeId)
+
         BeeManager.removeBee(bee.beeId)
         JobManager.removeAttemptByBee(bee.beeId, this)
         assignTask()

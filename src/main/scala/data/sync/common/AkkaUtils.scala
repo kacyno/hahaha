@@ -58,8 +58,8 @@ object AkkaUtils extends Logging {
 
     val logAkkaConfig = "off" //if (conf.getBoolean("spark.akka.logAkkaConfig", false)) "on" else "off"
 
-    val akkaHeartBeatPauses = 6000
-    val akkaHeartBeatInterval = 1000
+    val akkaHeartBeatPauses = 600
+    val akkaHeartBeatInterval = 10
 
     //    val secretKey = securityManager.getSecretKey()
     //    val isAuthOn = securityManager.isAuthenticationEnabled()
@@ -80,8 +80,8 @@ object AkkaUtils extends Logging {
       s"""
          |akka.daemonic = on
          |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
-         |akka.stdout-loglevel = "DEBUG"
-         |akka.loglevel = "DEBUG"
+         |akka.stdout-loglevel = "INFO"
+         |akka.loglevel = "INFO"
          |akka.jvm-exit-on-fatal-error = off
          |akka.remote.require-cookie = "$requireCookie"
          |akka.remote.secure-cookie = "$secureCookie"
@@ -100,15 +100,15 @@ object AkkaUtils extends Logging {
          |akka.remote.log-remote-lifecycle-events = $lifecycleEvents
          |akka.log-dead-letters = $lifecycleEvents
          |akka.log-dead-letters-during-shutdown = $lifecycleEvents
-         |akka.remote.retry-gate-closed-for = 1 s
-         |akka.remote.prune-quarantine-marker-after = 1 s
-         |akka.debug.receive = on
-         |akka.debug.autoreceive = on
-         |akka.debug.lifecycle = on
-         |akka.debug.fsm = on
-         |akka.debug.event-stream = on
-         |akka.debug.unhandled = on
-         |akka.debug.router-misconfiguration = on
+         |akka.remote.retry-gate-closed-for = 0.5 s
+         |akka.remote.use-passive-connections = off
+         |akka.actor.debug.fsm = off
+         |akka.actor.debug.event-stream = off
+         |akka.actor.debug.unhandled = off
+         |akka.actor.debug.router-misconfiguration = off
+         |akka.actor.debug.receive = off
+         |akka.actor.debug.autoreceive = off
+         |akka.actor.debug.lifecycle = off
       """.stripMargin))
 
     val actorSystem = ActorSystem(name, akkaConf)

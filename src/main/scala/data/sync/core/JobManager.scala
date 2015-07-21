@@ -201,7 +201,7 @@ object JobManager extends Logging {
     }
   }
 
-  def removeAttemptByBee(beeId: String, queen: Queen): Unit = {
+  def removeAttemptByBee(beeId: String, queen: Queen): Unit = JobManager.synchronized{
     for (atpId <- bee2attempt.getOrElse(beeId, new util.HashSet[String]())) {
       attempt2bee -= atpId
       val atp = taskAttemptDic(atpId)

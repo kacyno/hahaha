@@ -74,6 +74,7 @@ class Bee(conf: Configuration) extends Logging {
       case x: DisassociatedEvent if x.remoteAddress == masterAddress =>
         stopAll()
         masterDisconnected()
+      case e =>println(e.toString)
     }
 
     override def preStart() {
@@ -289,6 +290,7 @@ class Bee(conf: Configuration) extends Logging {
       name = Constants.BEE_NAME)
     Bee.printBee()
     actorSystem.awaitTermination()
+
   }
 }
 
