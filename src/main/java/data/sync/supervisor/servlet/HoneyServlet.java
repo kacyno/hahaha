@@ -71,7 +71,7 @@ public class HoneyServlet extends HttpServlet {
                     AlarmMessage message = new AlarmMessage();
                     String title = jobName;
                     message.setRetryTimes(sendTimes);
-                    message.setTitle(title );
+                    message.setTitle(title+"&"+jobId+"&"+status );
                     message.setBody(jobId+"::"+user+" "+status);
                     message.setTargets(targets);
                     Supervisor.queueMap.get(key).add(message);

@@ -8,7 +8,7 @@ import data.sync.common.ClusterMessages._
 import data.sync.common.{HdfsUtil, Logging, Constants}
 import data.sync.core.ha.PersistenceEngine
 import org.apache.commons.lang.{ArrayUtils, StringUtils}
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FsShell, Path}
 import org.apache.hadoop.util.Shell
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -107,7 +107,7 @@ object JobManager extends Logging {
 
   //对长时间没有状态更新的任务启动并行
   def checkTimeOut(): Boolean = JobManager.synchronized {
-    logInfo("Timout Check...")
+    logDebug("Timout Check...")
     var needAssign = false
     val now = System.currentTimeMillis()
     for ((attemptId, bee) <- attempt2bee) {
@@ -237,8 +237,25 @@ object JobManager extends Logging {
             hdfs.rename(new Path(job.targetDir + "tmp/" + atpId.attemptId), new Path(job.targetDir + atpId.attemptId))
           }
         }
+
         hdfs.delete(new Path(job.targetDir + "tmp/")) //失败的任务可能在删文件时还在操作，只删成功的
         hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
+        //如果作业有配置回调命，执行
+        if (StringUtils.isNotEmpty(job.callbackCMD)) {
+          val command = job.callbackCMD.split(" ")
+          logInfo(job.jobId + " has cmd： " + ArrayUtils.toString(command))
+          val exe = new Shell.ShellCommandExecutor(command)
+          var exitCode = 0
+          try {
+            exe.execute()
+          } catch {
+            case e: Exception => logError("cmd execute failed ", e)
+          } finally {
+            exitCode = exe.getExitCode()
+            logInfo(exitCode.toString)
+            logInfo(exe.getOutput())
+          }
+        }
       } catch {
         //IO操作，当报错时捕获，不影响其它后续操作
         case e: Throwable => {
@@ -246,22 +263,7 @@ object JobManager extends Logging {
           job.finished(JobStatus.FAILED)
         }
       }
-      //如果作业有配置回调命，执行
-      if (StringUtils.isNotEmpty(job.callbackCMD)) {
-        val command = job.callbackCMD.split(" ")
-        logInfo(job.jobId + " has cmd： " + ArrayUtils.toString(command))
-        val exe = new Shell.ShellCommandExecutor(command)
-        var exitCode = 0
-        try {
-          exe.execute()
-        } catch {
-          case e: Exception => logError("cmd execute failed ", e)
-        } finally {
-          exitCode = exe.getExitCode()
-          logInfo(exitCode.toString)
-          logInfo(exe.getOutput())
-        }
-      }
+
     }
     clearJob(jobId)
   }
@@ -278,7 +280,7 @@ object JobManager extends Logging {
    *Job出现错误，杀死job
    * 向所有相关的bee发送杀死job的请求，同时commitjob
    */
-  def killJob(jobId: String, status: JobStatus = JobStatus.FAILED): Unit = synchronized {
+  def killJob(jobId: String, status: JobStatus = JobStatus.FAILED): Unit =  {
     logInfo(jobId + " is killed by " + status)
     val job = jobDic(jobId)
     for (task <- (job.runningTasks ++ job.appendTasks)) {

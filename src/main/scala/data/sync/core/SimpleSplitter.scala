@@ -53,12 +53,12 @@ object SimpleSplitter extends Splitter with Logging {
             try {
               DBUtils.closeResultSet(rs)
             }catch{
-              case _=>
+              case _:Throwable=>
             }
             try {
               conn.close()
             }catch{
-              case _=>
+              case _:Throwable=>
             }
           }
         }

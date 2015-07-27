@@ -18,7 +18,7 @@ import java.io.PrintWriter;
 public class HDFSSinker implements Sinker {
     private static Logger logger = Logger.getLogger(HDFSSinker.class);
 
-    public static final char SEPARATOR = 0x01;
+    public static final char SEPARATOR = '\t';
     private FileSystem fs;
     private Path target;
     private volatile boolean stop = false;

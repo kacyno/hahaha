@@ -96,7 +96,12 @@ public class HttpUtil {
         return response;
     }
     public static void execute(String url, Map<String, String> map) throws Exception {
-        CloseableHttpResponse response = execute(url,map,HttpType.GET,1,5000,5000);
-        response.close();
+        CloseableHttpResponse response=null;
+        try {
+            response = execute(url, map, HttpType.GET, 1, 5000, 5000);
+        }finally{
+            if(response!=null)
+                response.close();
+        }
     }
 }

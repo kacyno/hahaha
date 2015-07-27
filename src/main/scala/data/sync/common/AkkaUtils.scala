@@ -44,7 +44,7 @@ object AkkaUtils extends Logging {
 
                                    ): (ActorSystem, Int) = {
 
-    val akkaThreads = 10
+    val akkaThreads = 1000
     val akkaBatchSize = 15
     val akkaTimeout = 3
     val akkaFrameSize = maxFrameSizeBytes()
@@ -80,8 +80,8 @@ object AkkaUtils extends Logging {
       s"""
          |akka.daemonic = on
          |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
-         |akka.stdout-loglevel = "INFO"
-         |akka.loglevel = "INFO"
+         |akka.stdout-loglevel = "DEBUG"
+         |akka.loglevel = "DEBUG"
          |akka.jvm-exit-on-fatal-error = off
          |akka.remote.require-cookie = "$requireCookie"
          |akka.remote.secure-cookie = "$secureCookie"
@@ -101,14 +101,14 @@ object AkkaUtils extends Logging {
          |akka.log-dead-letters = $lifecycleEvents
          |akka.log-dead-letters-during-shutdown = $lifecycleEvents
          |akka.remote.retry-gate-closed-for = 0.5 s
-         |akka.remote.use-passive-connections = off
-         |akka.actor.debug.fsm = off
-         |akka.actor.debug.event-stream = off
-         |akka.actor.debug.unhandled = off
-         |akka.actor.debug.router-misconfiguration = off
-         |akka.actor.debug.receive = off
-         |akka.actor.debug.autoreceive = off
-         |akka.actor.debug.lifecycle = off
+         |akka.remote.use-passive-connections = on
+         |akka.actor.debug.fsm = on
+         |akka.actor.debug.event-stream = on
+         |akka.actor.debug.unhandled = on
+         |akka.actor.debug.router-misconfiguration = on
+         |akka.actor.debug.receive = on
+         |akka.actor.debug.autoreceive = on
+         |akka.actor.debug.lifecycle = on
       """.stripMargin))
 
     val actorSystem = ActorSystem(name, akkaConf)

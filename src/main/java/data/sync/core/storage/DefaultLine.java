@@ -63,11 +63,10 @@ public class DefaultLine implements Line {
 	@Override
 	public StringBuffer toStringBuffer(char separator) {
 		StringBuffer tmp = new StringBuffer();
-		tmp.append(fieldNum);
-		tmp.append(":\t");
-		for (int i = 0; i < fieldNum; i++) {
+		for (int i = 0; i < fieldNum-1; i++) {
 			tmp.append(fieldList[i]).append(separator);
 		}
+		tmp.append(fieldList[fieldNum-1]);
 		return tmp;
 	}
 	

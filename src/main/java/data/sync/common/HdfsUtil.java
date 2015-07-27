@@ -2,6 +2,7 @@ package data.sync.common;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
@@ -26,7 +27,8 @@ public class HdfsUtil {
         hdfs.rename(src,target);
     }
     public void delete(Path path) throws IOException {
-        hdfs.delete(path,true);
+        //集群限制，必须通过该方法才能删除
+        new FsShell().delete(path,hdfs,true,true);
     }
     public void createNewFile(Path path) throws IOException {
         hdfs.createNewFile(path);

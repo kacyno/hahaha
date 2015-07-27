@@ -2,7 +2,7 @@
     <property>
         <name>queens.hostport</name>
         <!--<value>localhost:43935,localhost:43936</value>-->
-        <value>10.172.189.11:43935</value>
+        <value>182.118.61.116:43935</value>
         <description>queen主机与端口，(HA)多个逗号分开</description>
     </property>
     <property>

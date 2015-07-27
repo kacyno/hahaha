@@ -68,6 +68,7 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
       if (Queen.state == RecoveryState.STANDBY) {
         // ignore, don't send response
       }else {
+        logInfo("client Registered")
         sender ! RegisteredClient(queenUrl)
       }
     case job @ SubmitJob(priority, dbinfos, taskNum, cmd,url,user,jobName,targetDir) =>
@@ -93,7 +94,9 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
     case data.sync.common.ClientMessages.KillJob(jobId)=>
       try {
         logInfo("Kill Job:"+jobId)
-        JobManager.killJob(jobId, JobStatus.KILLED)
+        JobManager.synchronized {
+          JobManager.killJob(jobId, JobStatus.KILLED)
+        }
       }catch{
         case e:Exception=>
           logError("kill error "+jobId,e)
