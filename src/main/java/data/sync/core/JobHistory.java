@@ -36,8 +36,9 @@ public class JobHistory {
         Notifier.notifyJob(jobInfo);
         if(jobHistorys.size()>=MAX_KEEP_NUM){
             Iterator<String> ite = jobHistorys.keySet().iterator();
-            for(int i=0;i<50;i++){
-                    jobHistorys.remove(ite.next());
+            for(int i=0;i<(MAX_KEEP_NUM/10);i++){
+                    ite.next();
+                    ite.remove();
             }
         }
         jobHistorys.put(job.jobId,job);
