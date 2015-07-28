@@ -239,7 +239,6 @@ object JobManager extends Logging {
         }
 
         hdfs.delete(new Path(job.targetDir + "tmp/")) //失败的任务可能在删文件时还在操作，只删成功的
-        hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
         //如果作业有配置回调命，执行
         if (StringUtils.isNotEmpty(job.callbackCMD)) {
           val command = job.callbackCMD.split(" ")
@@ -248,6 +247,7 @@ object JobManager extends Logging {
           var exitCode = 0
           try {
             exe.execute()
+            hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
           } catch {
             case e: Exception => logError("cmd execute failed ", e)
           } finally {

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommonTest {
     @Test
     public void test1(){
-        System.out.println(new Date().getTime());
-        System.out.println((System.currentTimeMillis()));
+        String tem = "select * from a where a=b";
+        System.out.println("aaaa"+tem.substring(tem.indexOf("where")));
     }
 }

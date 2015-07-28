@@ -41,7 +41,10 @@ object SimpleSplitter extends Splitter with Logging {
           val conn = DBSource.getConnection(this.getClass, db.ip, db.port, db.db)
           var rs:ResultSet = null
           try {
-            rs = DBUtils.query(conn, sql.format(db.indexFiled, db.indexFiled, table))
+            var fsql = sql.format(db.indexFiled, db.indexFiled, table)
+            if(db.sql.toLowerCase.indexOf("where") != -1)
+              fsql = fsql+" "+db.sql.toLowerCase.substring(db.sql.toLowerCase.indexOf("where"))
+            rs = DBUtils.query(conn, fsql)
             var min = 0l;
             var max = 0l;
             if (rs.next()) {

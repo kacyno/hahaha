@@ -153,6 +153,7 @@ object HoneyClient {
   var jobId: String = null
   var jobName: String = null
   var confPath: String = null
+  var params:String =null
   var user = System.getProperties.getProperty("user.name") + "@" + NetUtil.getHostname
 
   def main(args: Array[String]) {
@@ -167,8 +168,17 @@ object HoneyClient {
           System.exit(1)
         }
         val source = Source.fromFile(confPath, "UTF-8")
-        val desc = source.mkString
-        //      println(JSONObject.fromObject(parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))))
+        var desc = source.mkString
+        if(params!=null){
+          val kvs = params.split(",")
+          for(kv <- kvs){
+            val kva = kv.split("=")
+            val k = "$"+kva(0)
+            val v = kva(1)
+            desc = desc.replace(k.trim,v.trim)
+          }
+        }
+        println(desc)
         val submitJob = parseJSONObjectToSubmitJob(JSONObject.fromObject(desc))
         if (taskNum > 0) {
           submitJob.taskNum = taskNum
@@ -221,6 +231,7 @@ object HoneyClient {
         |  --number  job-task-number
         |  --conf    job-conf-path
         |  --name    job-name
+        |  --param   job-param [format:paramName=paramValue,paramName=paramValue]
         |  --help, -h
 
       """.stripMargin
@@ -252,7 +263,9 @@ object HoneyClient {
           printConflictInfo
         }
         parse(tail)
-
+      case ("--param") :: value :: tail =>
+        params = value
+        parse(tail)
       case ("--conf") :: value :: tail =>
         confPath = value
         isSubmit = true

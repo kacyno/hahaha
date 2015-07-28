@@ -1,11 +1,9 @@
 package data.sync.core;
 
-import data.sync.common.ClientMessages;
 import data.sync.common.Configuration;
 import data.sync.common.Constants;
 import data.sync.common.Notifier;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -22,10 +20,12 @@ public class JobHistory {
     public static final String HISTORY_DIR;
     private static final Log LOG = LogFactory.getLog(JobHistory.class);
     public static final String POST_FIX = ".hisjob";
+    public static final int MAX_KEEP_NUM;
     static{
         Configuration conf = new Configuration();
         conf.addResource(Constants.CONFIGFILE_NAME);
         HISTORY_DIR = conf.get(Constants.HISTORY_DIR,Constants.HISTORY_DIR_DEFAULT);
+        MAX_KEEP_NUM = conf.getInt(Constants.HISTORY_KEEP_NUM, Constants.HISTORY_KEEP_NUM_DEFAULT);
     }
     public static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static Map<String,HJob> jobHistorys = new LinkedHashMap<String,HJob>(1000, 0.15f);
@@ -34,7 +34,7 @@ public class JobHistory {
         //需要通知的任务向目标地址发送httprequest
         JobInfo jobInfo = JobManager.getJob(jobId);
         Notifier.notifyJob(jobInfo);
-        if(jobHistorys.size()>=1000){
+        if(jobHistorys.size()>=MAX_KEEP_NUM){
             Iterator<String> ite = jobHistorys.keySet().iterator();
             for(int i=0;i<50;i++){
                     jobHistorys.remove(ite.next());
@@ -116,7 +116,7 @@ public class JobHistory {
                 return (int)(o2.lastModified()-o1.lastModified());
             }
         });
-        int length = files.length>1000?1000:files.length;
+        int length = files.length>MAX_KEEP_NUM?MAX_KEEP_NUM:files.length;
         for(int i=length;i>0;i--){
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(files[i-1]));
             HJob job = (HJob)ois.readObject();

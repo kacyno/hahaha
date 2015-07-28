@@ -1,8 +1,8 @@
 <configuration>
     <property>
         <name>queens.hostport</name>
-        <!--<value>localhost:43935,localhost:43936</value>-->
-        <value>182.118.61.116:43935</value>
+        <value>localhost:43935,localhost:43936</value>
+        <!--<value>182.118.61.116:43935</value>-->
         <description>queen主机与端口，(HA)多个逗号分开</description>
     </property>
     <property>
@@ -59,7 +59,7 @@
     </property>
     <property>
         <name>recovery.mode</name>
-        <value>ZOOKEEPER</value>
+        <value>FILESYSTEM</value>
         <description>NONE,ZOOKEEPER,FILESYSTEM,CUSTOM</description>
     </property>
     <property>

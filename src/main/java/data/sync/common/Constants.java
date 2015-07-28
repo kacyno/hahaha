@@ -37,7 +37,8 @@ public interface Constants {
     //int TASK_TIMEOUT = 10*60*1000;
     String HISTORY_DIR = "history.dir";
     String HISTORY_DIR_DEFAULT = "./";
-
+    String HISTORY_KEEP_NUM="history.num";
+    int HISTORY_KEEP_NUM_DEFAULT=100;
     String FETCHER_CLASSNAME = "fetcher.classname";
 
     String SINKER_CLASSNAME = "sinker.classname";
