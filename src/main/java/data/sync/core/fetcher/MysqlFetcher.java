@@ -8,7 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Properties;
 
 /**
@@ -45,6 +45,7 @@ public class MysqlFetcher implements Fetcher{
         DBSource.register(this.getClass(), ip, port, dbname, createProperties());
         Connection conn = DBSource.getConnection(this.getClass(), ip, port, dbname);
         ResultSet rs=null;
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try {
             long start = System.currentTimeMillis();
             rs = DBUtils.query(conn, sql);
@@ -53,16 +54,36 @@ public class MysqlFetcher implements Fetcher{
 
                 size = rs.getMetaData().getColumnCount();
                 Line l = storage.createLine();
-                for(int i=1;i<=size;i++)
-                    l.addField(rs.getString(i));
+                for(int i=1;i<=size;i++) {
+                    Object result = rs.getObject(i);
+                    if(result==null){
+                        l.addField("NULL");
+                    }else {
+                        if (result instanceof java.sql.Timestamp) {
+                            l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
+                        }
+                        else
+                            l.addField(rs.getString(i));
+                    }
+                }
                 storage.push(l);
                 stat.incReadNum(1);
             }
 
             while(rs.next()&&!stop){
                 Line l = storage.createLine();
-                for(int i=1;i<=size;i++)
-                    l.addField(rs.getString(i));
+                for(int i=1;i<=size;i++) {
+                    Object result = rs.getObject(i);
+                    if(result==null){
+                        l.addField("NULL");
+                    }else {
+                        if (result instanceof java.sql.Timestamp) {
+                            l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
+                        }
+                        else
+                            l.addField(rs.getString(i));
+                    }
+                }
                 storage.push(l);
                 stat.incReadNum(1);
             }

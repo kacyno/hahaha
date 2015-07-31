@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 /**
  * Created by hesiyuan on 15/6/19.
  */
-class HoneyClient extends Logging {
+class HoneyClient {
 
   val conf = new Configuration()
   conf.addResource(Constants.CONFIGFILE_NAME)
@@ -49,9 +49,9 @@ class HoneyClient extends Logging {
   var masterAddress: Address = null
   while (master == null) {
     Thread.sleep(1000)
-    log.info("Waiting for queen to connect...")
+    print("Waiting for queen to connect...")
   }
-  val actorRef: ActorRef = Await.result(master.resolveOne()(Duration.create(15, "seconds")), Duration.create(15, "seconds"))
+  val actorRef: ActorRef = Await.result(master.resolveOne()(Duration.create(600, "seconds")), Duration.create(15, "seconds"))
 
   class HoneyClientActor extends Actor with ActorLogReceive with Logging {
     override def receiveWithLogging = {
@@ -61,15 +61,15 @@ class HoneyClient extends Logging {
           changeMaster(masterUrl)
         }
       case DisassociatedEvent(_, address, _) if address == masterAddress =>
-        log.error(s"Connection to $address failed; waiting for queen to reconnect...")
+        println(s"Connection to $address failed; waiting for queen to reconnect...")
         registerWithMaster
       case AssociationErrorEvent(cause, _, address, _, _) if isPossibleMaster(address) =>
-        log.error(s"Could not connect to $address: $cause")
+        println(s"Could not connect to $address: $cause")
     }
 
     def tryRegisterAllMasters() {
       for (masterAkkaUrl <- masterAkkaUrls) {
-        logInfo("Connecting to queen " + masterAkkaUrl + "...")
+        println("Connecting to queen " + masterAkkaUrl + "...")
         val actor = context.actorSelection(masterAkkaUrl)
         actor ! RegisterClient
       }
@@ -82,7 +82,7 @@ class HoneyClient extends Logging {
       registrationRetryTimer
       match {
         case Some(_) =>
-          logInfo("Not spawning another attempt to register with the master, since there is an" +
+          println("Not spawning another attempt to register with the master, since there is an" +
             " attempt scheduled already.")
         case None => registrationRetryTimer = Some {
           context.system.scheduler.schedule(REGISTRATION_TIMEOUT, 5.seconds) {
@@ -90,7 +90,7 @@ class HoneyClient extends Logging {
             if (registered) {
               registrationRetryTimer.foreach(_.cancel())
             } else if (retries >= REGISTRATION_RETRIES) {
-              logInfo("All queens are unresponsive! Giving up.")
+              println("All queens are unresponsive! Giving up.")
               System.exit(1)
             } else {
               tryRegisterAllMasters()
@@ -122,13 +122,13 @@ class HoneyClient extends Logging {
         registerWithMaster()
       } catch {
         case e: Exception =>
-          logWarning("Failed to connect to master", e)
+          println("Failed to connect to master", e)
           context.stop(self)
       }
     }
 
     val REGISTRATION_TIMEOUT = 5.seconds
-    val REGISTRATION_RETRIES = 3
+    val REGISTRATION_RETRIES = 300
     var registered = false
     var activeMasterUrl: String = null
     var registrationRetryTimer: Option[Cancellable] = None
