@@ -32,6 +32,19 @@ public class Notifier {
             }
         }
     }
+    public static void notifyExternal(String jobId,String status,String jobName,String user,String url){
+        Map<String,String> map = new HashMap<String,String>();
+        map.put("jobId",jobId);
+        map.put("status", status);
+        map.put("jobName",jobName);
+        map.put("user",user);
+        try {
+            LOG.info("Notify:"+map);
+            Notifier.addNotify(url, map,3);
+        }catch(Exception e){
+            LOG.error("Notify error "+jobId,e);
+        }
+    }
     static class Notify {
         private String message;
         private int times;

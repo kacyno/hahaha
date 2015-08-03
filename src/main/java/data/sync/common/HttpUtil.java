@@ -16,7 +16,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +71,7 @@ public class HttpUtil {
             case GET:{
                 HttpGet get  = new HttpGet(fillUrl(url,map));
                 get.setConfig(config);
+                LOG.info(get.getURI().toString());
                 return get;
             }
             case POST:{
@@ -100,6 +103,10 @@ public class HttpUtil {
         try {
             response = execute(url, map, HttpType.GET, 1, 5000, 5000);
         }finally{
+            BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+            String rep = null;
+            while((rep=br.readLine())!=null)
+                LOG.info(rep);
             if(response!=null)
                 response.close();
         }

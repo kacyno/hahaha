@@ -63,7 +63,7 @@ public class MysqlFetcher implements Fetcher{
                             l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
                         }
                         else
-                            l.addField(rs.getString(i));
+                            l.addField(rs.getString(i).replace("\t","").replace("\r", "").replace("\n",""));
                     }
                 }
                 storage.push(l);
@@ -81,7 +81,7 @@ public class MysqlFetcher implements Fetcher{
                             l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
                         }
                         else
-                            l.addField(rs.getString(i));
+                            l.addField(rs.getString(i).replace("\t","").replace("\r","").replace("\n",""));
                     }
                 }
                 storage.push(l);

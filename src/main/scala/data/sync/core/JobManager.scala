@@ -5,7 +5,7 @@ import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 
 import data.sync.common.ClusterMessages._
-import data.sync.common.{HdfsUtil, Logging, Constants}
+import data.sync.common.{Notifier, HdfsUtil, Logging, Constants}
 import data.sync.core.ha.PersistenceEngine
 import org.apache.commons.lang.{ArrayUtils, StringUtils}
 import org.apache.hadoop.fs.{FsShell, Path}
@@ -241,19 +241,26 @@ object JobManager extends Logging {
         hdfs.delete(new Path(job.targetDir + "tmp/")) //失败的任务可能在删文件时还在操作，只删成功的
         //如果作业有配置回调命，执行
         if (StringUtils.isNotEmpty(job.callbackCMD)) {
-          val command = job.callbackCMD.split(" ")
-          logInfo(job.jobId + " has cmd： " + ArrayUtils.toString(command))
-          val exe = new Shell.ShellCommandExecutor(command)
-          var exitCode = 0
-          try {
-            exe.execute()
-            hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
-          } catch {
-            case e: Exception => logError("cmd execute failed ", e)
-          } finally {
-            exitCode = exe.getExitCode()
-            logInfo(exitCode.toString)
-            logInfo(exe.getOutput())
+          var retry=0
+          var exitCode = -1
+          while(exitCode!=0&&retry<5) {
+            retry+=1
+            val command = job.callbackCMD.split(" ")
+            logInfo(job.jobId + " has cmd： " + ArrayUtils.toString(command))
+            val exe = new Shell.ShellCommandExecutor(command)
+            try {
+              exe.execute()
+              hdfs.createNewFile(new Path(job.targetDir + "_SUCCESS"))
+            } catch {
+              case e: Exception => {
+                logError("cmd execute failed ", e)
+                Notifier.notifyExternal(job.jobId,"FAILED",job.jobName,job.user,job.notifyUrl)
+              }
+            } finally {
+              exitCode = exe.getExitCode()
+              logInfo(job.jobName+" cmd result:"+exitCode.toString)
+              logInfo(exe.getOutput())
+            }
           }
         }
       } catch {
