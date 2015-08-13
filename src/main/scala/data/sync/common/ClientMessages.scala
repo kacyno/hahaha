@@ -10,14 +10,15 @@ sealed trait ClientMessage extends Serializable
 
 object ClientMessages {
 
-  case class DBInfo(@BeanProperty sql: String,
+  case class DBInfo(@BeanProperty var sql: String,
                     @BeanProperty indexFiled: String,
                     @BeanProperty var tables: Array[String],
                     @BeanProperty db: String,
                     @BeanProperty ip: String,
                     @BeanProperty port: String,
                     @BeanProperty user: String,
-                    @BeanProperty pwd: String
+                    @BeanProperty pwd: String,
+                    @BeanProperty var needFix:Boolean=true
                      ) extends ClientMessage
 
   case class SubmitJob(@BeanProperty var priority: Int,
@@ -27,7 +28,8 @@ object ClientMessages {
                        @BeanProperty url:String,
                        @BeanProperty user:String,
                        @BeanProperty var jobName:String,
-                       @BeanProperty var targetDir: String) extends ClientMessage
+                       @BeanProperty var targetDir: String,
+                       @BeanProperty var codec:String ) extends ClientMessage
   case object RegisterClient extends ClientMessage
   case class RegisteredClient(queenUrl:String) extends ClientMessage
   case class KillJob(jobId:String) extends ClientMessage

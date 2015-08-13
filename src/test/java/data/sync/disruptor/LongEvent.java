@@ -5,7 +5,7 @@ package data.sync.disruptor;
  */
 public class LongEvent
 {
-    private long value;
+    public long value;
 
     public void set(long value)
     {

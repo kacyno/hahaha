@@ -55,16 +55,7 @@ public class MysqlFetcher implements Fetcher{
                 size = rs.getMetaData().getColumnCount();
                 Line l = storage.createLine();
                 for(int i=1;i<=size;i++) {
-                    Object result = rs.getObject(i);
-                    if(result==null){
-                        l.addField("NULL");
-                    }else {
-                        if (result instanceof java.sql.Timestamp) {
-                            l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
-                        }
-                        else
-                            l.addField(rs.getString(i).replace("\t","").replace("\r", "").replace("\n",""));
-                    }
+                    l.addField(rs.getString(i));
                 }
                 storage.push(l);
                 stat.incReadNum(1);
@@ -73,16 +64,7 @@ public class MysqlFetcher implements Fetcher{
             while(rs.next()&&!stop){
                 Line l = storage.createLine();
                 for(int i=1;i<=size;i++) {
-                    Object result = rs.getObject(i);
-                    if(result==null){
-                        l.addField("NULL");
-                    }else {
-                        if (result instanceof java.sql.Timestamp) {
-                            l.addField(format.format(new java.util.Date(((java.sql.Timestamp) result).getTime())));
-                        }
-                        else
-                            l.addField(rs.getString(i).replace("\t","").replace("\r","").replace("\n",""));
-                    }
+                   l.addField(rs.getString(i));
                 }
                 storage.push(l);
                 stat.incReadNum(1);

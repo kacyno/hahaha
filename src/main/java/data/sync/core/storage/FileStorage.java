@@ -10,7 +10,7 @@ public class FileStorage extends Storage {
     }
 
     @Override
-    public boolean push(Line[] lines, int size) {
+    public boolean push(Line[] lines) {
         return false;
     }
 

@@ -31,7 +31,7 @@ public abstract class Storage {
 	
 	abstract public boolean push(Line line);
 
-	abstract public boolean push(Line[] lines, int size);
+	abstract public boolean push(Line[] lines);
 
 	abstract public Line pull();
 

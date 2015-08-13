@@ -1,6 +1,6 @@
 package data.sync.core
 
-import java.sql.ResultSet
+import java.sql.{Types, ResultSet}
 import java.util.Properties
 import data.sync.common.ClientMessages.DBInfo
 import data.sync.common.ClusterMessages.TaskInfo
@@ -13,16 +13,16 @@ import scala.collection.JavaConversions._
  * Created by hesiyuan on 15/6/24.
  */
 object SimpleSplitter extends Splitter with Logging {
-  override def split(jobId: String, dbinfos: Array[DBInfo], num: Int, dir: String): java.util.Set[TaskInfo] = {
+  override def split(jobId: String, dbinfos: Array[DBInfo], num: Int, dir: String,codec:String): java.util.Set[TaskInfo] = {
+    fixSql(dbinfos)
     var set = new java.util.HashSet[TaskInfo]()
     val tableNum = dbinfos.foldLeft(0)((r, d) => r + d.tables.size)
     var i = 0;
-
     if (tableNum >= num) {
       //表比期望任务数还多，则以表的个数做为任务数
       for (db <- dbinfos) {
         for (table <- db.tables)
-          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
+          set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.replace("%table",table), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",codec, 0l, 0l)
         i += 1
       }
     } else {
@@ -39,11 +39,11 @@ object SimpleSplitter extends Splitter with Logging {
         DBSource.register(this.getClass, db.ip, db.port, db.db, createProperties("utf-8", db.ip, db.port, db.db, db.user, db.pwd))
         for (table <- db.tables) {
           val conn = DBSource.getConnection(this.getClass, db.ip, db.port, db.db)
-          var rs:ResultSet = null
+          var rs: ResultSet = null
           try {
             var fsql = sql.format(db.indexFiled, db.indexFiled, table)
-            if(db.sql.toLowerCase.indexOf("where") != -1)
-              fsql = fsql+" "+db.sql.toLowerCase.substring(db.sql.toLowerCase.indexOf("where"))
+            if (db.sql.toLowerCase.indexOf("where") != -1)
+              fsql = fsql + " " + db.sql.toLowerCase.substring(db.sql.toLowerCase.indexOf("where"))
             rs = DBUtils.query(conn, fsql)
             var min = 0l;
             var max = 0l;
@@ -51,17 +51,17 @@ object SimpleSplitter extends Splitter with Logging {
               min = rs.getLong(1);
               max = rs.getLong(2);
             }
-            tableInfo(table+db.ip+db.port+db.db) = (min, max)
+            tableInfo(table + db.ip + db.port + db.db) = (min, max)
           } finally {
             try {
               DBUtils.closeResultSet(rs)
-            }catch{
-              case _:Throwable=>
+            } catch {
+              case _: Throwable =>
             }
             try {
               conn.close()
-            }catch{
-              case _:Throwable=>
+            } catch {
+              case _: Throwable =>
             }
           }
         }
@@ -78,10 +78,10 @@ object SimpleSplitter extends Splitter with Logging {
 
         for (db <- dbinfos) {
           for (table <- db.tables) {
-            val info = tableInfo(table+db.ip+db.port+db.db)
+            val info = tableInfo(table + db.ip + db.port + db.db)
             if (info._2 > 0) {
-              var p = (info._2 - info._1+1) / perNum
-              if (!(p > 0 && ((info._2 - info._1+1) % perNum) < (perNum / 3.0)))
+              var p = (info._2 - info._1 + 1) / perNum
+              if (!(p > 0 && ((info._2 - info._1 + 1) % perNum) < (perNum / 3.0)))
                 p += 1
               for (j <- 1l to p) {
                 var cond = " %s>=%d and %s<%d"
@@ -90,9 +90,9 @@ object SimpleSplitter extends Splitter with Logging {
                 } else
                   cond = " and " + cond
                 if (j == p)
-                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2 + 1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
+                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.replace("%table",table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._2 + 1), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/",codec, 0l, 0l)
                 else
-                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.format(table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", 0l, 0l)
+                  set += TaskInfo(jobId + "_task_" + i, jobId, db.sql.replace("%table",table) + cond.format(db.indexFiled, info._1 + perNum * (j - 1), db.indexFiled, info._1 + perNum * j), db.ip, db.port, db.user, db.pwd, db.db, table, dir + "tmp/", codec,0l, 0l)
                 i += 1
               }
             }
@@ -125,4 +125,50 @@ object SimpleSplitter extends Splitter with Logging {
     p.setProperty("validationQuery", "select 1 from dual")
     return p
   }
+
+  def fixSql(dbinfos: Array[DBInfo]) = {
+    for (db <- dbinfos) {
+      if (db.needFix) {
+        DBSource.register(this.getClass, db.ip, db.port, db.db, createProperties("utf-8", db.ip, db.port, db.db, db.user, db.pwd))
+        val conn = DBSource.getConnection(this.getClass, db.ip, db.port, db.db)
+        var trs: ResultSet = null
+        try {
+          val sql = db.sql.replace("%table",db.tables(0))
+          val tsql = sql + " limit 1"
+          trs = DBUtils.query(conn, tsql)
+          val metadata = trs.getMetaData
+          val csize = metadata.getColumnCount
+          for (i <- 1 to csize) {
+            if (metadata.getColumnType(i) == Types.VARCHAR) {
+              var cn = metadata.getColumnName(i).toLowerCase()
+              if(db.sql.toLowerCase().indexOf("`"+cn+"`") != -1)
+                cn = "`"+cn+"`"
+              db.sql = db.sql.toLowerCase().replace(cn, s""" replace(replace(replace($cn,'\\t',''), '\\n', ''), '\\r', '') """)
+            } else if (metadata.getColumnType(i) == Types.TIMESTAMP) {
+              var cn = metadata.getColumnName(i).toLowerCase
+              if(db.sql.toLowerCase().indexOf("`"+cn+"`") != -1)
+                cn = "`"+cn+"`"
+              db.sql = db.sql.toLowerCase().replace(cn, s""" date_format($cn,'%Y-%m-%d %H:%i:%s') """)
+            }
+          }
+          db.sql = db.sql.replace("%y","%Y").replace("%h","%H")
+          logDebug(db.sql)
+          db.needFix= false
+        } finally {
+          try {
+            DBUtils.closeResultSet(trs)
+          } catch {
+            case _: Throwable =>
+          }
+          try {
+            conn.close()
+          } catch {
+            case _: Throwable =>
+          }
+        }
+      }
+    }
+  }
 }
+
+

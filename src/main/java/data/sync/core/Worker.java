@@ -6,6 +6,7 @@ import data.sync.core.fetcher.Fetcher;
 import data.sync.core.fetcher.MysqlFetcher;
 import data.sync.core.sinker.HDFSSinker;
 import data.sync.core.sinker.Sinker;
+import data.sync.core.storage.DisruptorStorage;
 import data.sync.core.storage.RAMStorage;
 import data.sync.core.storage.Storage;
 import org.apache.log4j.Logger;
@@ -65,7 +66,7 @@ public class Worker {
         sinkerE = new SinkerExecutor();
 
         storage = new RAMStorage();
-        storage.init(conf.getInt("storage.limit.size",2000),sinkerE,fetcherE);
+        storage.init(conf.getInt("storage.limit.size",2048),sinkerE,fetcherE);
     }
     public String getJobId(){
         return attempt.taskDesc().jobId();

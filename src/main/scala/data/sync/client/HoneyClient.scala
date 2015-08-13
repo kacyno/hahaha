@@ -51,7 +51,7 @@ class HoneyClient {
     Thread.sleep(1000)
     print("Waiting for queen to connect...")
   }
-  val actorRef: ActorRef = Await.result(master.resolveOne()(Duration.create(600, "seconds")), Duration.create(15, "seconds"))
+  val actorRef: ActorRef = Await.result(master.resolveOne()(Duration.create(600, "seconds")), Duration.create(600, "seconds"))
 
   class HoneyClientActor extends Actor with ActorLogReceive with Logging {
     override def receiveWithLogging = {
@@ -251,7 +251,7 @@ object HoneyClient {
         jobj.getString("user"),
         jobj.getString("pwd"))
     }
-    ).toArray, json.getInt("taskNum"), json.getString("callbackCMD"), json.getString("notifyUrl"), user, json.getString("jobName"), json.getString("targetDir"))
+    ).toArray, json.getInt("taskNum"), json.getString("callbackCMD"), json.getString("notifyUrl"), user, json.getString("jobName"), json.getString("targetDir"),if(json.containsKey("codec")) json.getString("codec") else "")
   }
 
   private def parseOpts(opts: Seq[String]): Unit = {

@@ -234,7 +234,8 @@ object JobManager extends Logging {
       try {
         for (task <- job.finishedTasks) {
           for (atpId <- taskDic(task.taskId) if (taskAttemptDic(atpId.attemptId).status == TaskAttemptStatus.FINISHED)) {
-            hdfs.rename(new Path(job.targetDir + "tmp/" + atpId.attemptId), new Path(job.targetDir + atpId.attemptId))
+            val postfix = if(job.codec==null)"" else "."+job.codec
+            hdfs.rename(new Path(job.targetDir + "tmp/" + atpId.attemptId), new Path(job.targetDir + atpId.attemptId+postfix))
           }
         }
 

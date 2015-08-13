@@ -9,6 +9,8 @@ public class LongEventHandler implements EventHandler<LongEvent>
 {
     public void onEvent(LongEvent event, long sequence, boolean endOfBatch)
     {
-        System.out.println("Event: " + event);
+        if(event.value==99999999)
+            System.out.println("finish");
+//        System.out.println("Event: " + event);
     }
 }

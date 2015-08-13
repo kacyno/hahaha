@@ -23,21 +23,21 @@ public class LongEventMain
         Disruptor<LongEvent> disruptor = new Disruptor<LongEvent>(factory, bufferSize, executor);
 
         // Connect the handler
-       // disruptor.handleEventsWith(new LongEventHandler());
+        disruptor.handleEventsWith(new LongEventHandler());
         // Start the Disruptor, starts all threads running
         disruptor.start();
 
         // Get the ring buffer from the Disruptor to be used for publishing.
         RingBuffer<LongEvent> ringBuffer = disruptor.getRingBuffer();
-
         LongEventProducer producer = new LongEventProducer(ringBuffer);
         long now = System.currentTimeMillis();
         ByteBuffer bb = ByteBuffer.allocate(8);
-        for (long l = 0; l<1000000; l++)
+        for (long l = 0; l<100000000; l++)
         {
             bb.putLong(0, l);
             producer.onData(bb);
         }
         System.out.println(System.currentTimeMillis()-now);
+        disruptor.shutdown();
     }
 }

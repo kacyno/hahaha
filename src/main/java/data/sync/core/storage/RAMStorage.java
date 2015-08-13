@@ -28,7 +28,7 @@ public class RAMStorage extends Storage {
 		return true;
 	}
 
-	
+
 
 	@Override
 	public boolean push(Line line) {
@@ -43,7 +43,7 @@ public class RAMStorage extends Storage {
 	}
 
 	@Override
-	public boolean push(Line[] lines, int size) {
+	public boolean push(Line[] lines) {
 		throw new RuntimeException("Not Supported");
 	}
 

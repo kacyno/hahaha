@@ -34,12 +34,12 @@
     </property>
     <property>
         <name>bee.port</name>
-        <value>43933</value>
+        <value>43988</value>
         <description>bee akka端口</description>
     </property>
     <property>
         <name>bee.addr</name>
-        <value>172.19.92.2</value>
+        <value>localhost</value>
         <description>bee akka地址</description>
     </property>
     <property>

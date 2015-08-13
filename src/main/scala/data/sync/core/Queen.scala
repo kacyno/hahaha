@@ -71,7 +71,7 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
         logInfo("client Registered")
         sender ! RegisteredClient(queenUrl)
       }
-    case job @ SubmitJob(priority, dbinfos, taskNum, cmd,url,user,jobName,targetDir) =>
+    case job @ SubmitJob(priority, dbinfos, taskNum, cmd,url,user,jobName,targetDir,codec) =>
       logInfo(
         """
           |Submit job from %s
@@ -210,10 +210,12 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
    *将作业拆分成多个TaskDesc,并封装在Job中放入队列
    */
   def submitJob(submit:SubmitJob,jd:String=null):String={
+    if(org.apache.commons.lang.StringUtils.isEmpty(submit.codec))
+      submit.codec = null
     var jobId = jd
     if(jd==null)
       jobId = IDGenerator.generatorJobId();
-    val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir)
+    val tasks = SimpleSplitter.split(jobId, submit.dbinfos,submit.taskNum , submit.targetDir,submit.codec)
     //保存作业，用于恢复
     persistenceEngine.addJob(jobId,(jobId,submit))
     val job = JobInfo(jobId,
@@ -231,6 +233,7 @@ class Queen(conf:Configuration,queenUrl:String) extends Actor with ActorLogRecei
       submit.url,
       submit.user,
       submit.jobName,
+      submit.codec,
       JobStatus.SUBMITED
     )
     JobManager.addJob(job)

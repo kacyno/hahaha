@@ -27,6 +27,7 @@ object ClusterMessages {
                       @BeanProperty db: String,
                       @BeanProperty table: String,
                       @BeanProperty targetDir: String,
+                      @BeanProperty codec: String,
                       @BeanProperty var startTime: Long,
                       @BeanProperty var finishTime: Long,
                       @BeanProperty var status: TaskStatus = TaskStatus.STARTED,
@@ -91,6 +92,7 @@ object ClusterMessages {
                      @BeanProperty notifyUrl:String,
                      @BeanProperty user:String,
                      @BeanProperty jobName:String,
+                     @BeanProperty codec:String,
                      @BeanProperty var status: JobStatus = JobStatus.SUBMITED
                       ) {
     override def equals(obj: scala.Any): Boolean = {
