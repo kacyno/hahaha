@@ -93,7 +93,9 @@ object ClusterMessages {
                      @BeanProperty user:String,
                      @BeanProperty jobName:String,
                      @BeanProperty codec:String,
-                     @BeanProperty var status: JobStatus = JobStatus.SUBMITED
+                     @BeanProperty var status: JobStatus = JobStatus.SUBMITED,
+                     @BeanProperty var totalNum: Long =0l,
+                     @BeanProperty var totalTime: Long = 0l
                       ) {
     override def equals(obj: scala.Any): Boolean = {
       if (obj == null) return false

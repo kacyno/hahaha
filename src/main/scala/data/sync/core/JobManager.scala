@@ -116,10 +116,17 @@ object JobManager extends Logging {
       //查看该task是否需要进行预测执行
 
       val report = attempt2report(attemptId)
+      val interval = report.time-taskAttemptDic(attemptId).startTime
+      val attemptWrite = report.writeNum
+      val job = jobDic(taskAttemptDic(attemptId).taskDesc.jobId)
       if (now - report.time > Constants.TASK_TIMEOUT
-        && report.status != TaskAttemptStatus.FAILED
+        ||
+        //当超出保护时间后该attempt的执行速度明显慢于平均值，也需要进行一次探测执行
+        (interval>Constants.PROTECT_TIMEOUT&&attemptWrite/interval<(job.totalNum/(job.totalTime*10)))
+        &&
+        (report.status != TaskAttemptStatus.FAILED
         && report.status != TaskAttemptStatus.FINISHED
-        && report.status != TaskAttemptStatus.KILLED) {
+        && report.status != TaskAttemptStatus.KILLED)) {
         val task = taskAttemptDic(attemptId).taskDesc
         //只有当当前attempt为task最新的attempt时才会进行探测执行，
         if (attemptId == taskDic(task.taskId).last.attemptId) {
@@ -279,6 +286,13 @@ object JobManager extends Logging {
   def finishedAttempt(attemptId: String, status: TaskAttemptStatus): Unit = {
     taskAttemptDic(attemptId).finished(status);
     taskAttemptDic(attemptId).finishTime = new Date().getTime
+    //将job当前处理的条数与所用时间记录下来，用于推测执行
+    val job = jobDic(taskAttemptDic(attemptId).taskDesc.jobId)
+    val report=attempt2report.getOrElse(attemptId, null)
+    if(report!=null) {
+      job.totalNum = job.totalNum + report.writeNum
+      job.totalTime = job.totalTime + report.time-taskAttemptDic(attemptId).startTime
+    }
     val beeId = attempt2bee(attemptId)
     BeeManager.freeBee(beeId)
     removeBeeAttempt(beeId, attemptId);
