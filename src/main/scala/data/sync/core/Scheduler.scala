@@ -31,7 +31,7 @@ object FIFOScheduler extends Logging{
       else {
         val (jobId, _, _) = iter.next()
         val job = JobManager.getJob(jobId)
-        val tmp = job.appendTasks.map(a=>a)
+        val tmp = job.appendTasks //.map(a=>a)
         for (task <- tmp) {
           BeeManager.getMostFreeBee(task.lastErrorBee) match {
             case Some(beeId) =>
